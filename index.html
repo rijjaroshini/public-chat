@@ -1,74 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Easy Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Modern Chat</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: #e5ddd5; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
         
-        /* Header Fix */
-        .header { background: #075e54; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; }
-        .header b { flex: 1; font-size: 18px; }
+        /* Poori screen ka setup */
+        body { 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: #efe7dd; /* Light WhatsApp background */
+            overflow: hidden;
+        }
 
-        /* Search Bar */
-        #searchBox { display: none; background: white; padding: 8px; border-bottom: 1px solid #ccc; }
-        #searchBox input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
+        /* Upar wala header - Chota aur elegant */
+        .header { 
+            background: #075e54; 
+            color: white; 
+            padding: 10px 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            height: 55px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
 
-        /* Chat Messages Area */
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; padding-bottom: 20px; }
+        /* Chat Area - Yeh ab khubsurat scroll hoga */
+        #messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+
+        /* Message Bubbles - Modern design with shadows */
+        .msg { 
+            padding: 8px 12px; 
+            border-radius: 12px; 
+            max-width: 75%; 
+            font-size: 14.5px; 
+            position: relative; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            word-wrap: break-word;
+        }
         
-        /* Message Bubbles */
-        .msg { margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; max-width: 80%; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; line-height: 1.4; }
-        .my-msg { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
-        .other-msg { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .my-msg { 
+            align-self: flex-end; 
+            background: #e1ffc7; 
+            border-top-right-radius: 2px; 
+            border: 1px solid #d0e8b8;
+        }
         
-        .u-name { font-size: 11px; font-weight: bold; color: #075e54; display: block; margin-bottom: 3px; }
+        .other-msg { 
+            align-self: flex-start; 
+            background: #ffffff; 
+            border-top-left-radius: 2px;
+            border: 1px solid #e0e0e0;
+        }
 
-        /* Bottom Typing Bar - Fixed and Easy */
-        .footer { background: #f0f0f0; padding: 10px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #ddd; }
-        .input-box { flex: 1; background: white; border-radius: 25px; display: flex; align-items: center; padding: 2px 15px; border: 1px solid #ccc; }
-        #msgInput { flex: 1; border: none; padding: 12px 0; outline: none; font-size: 16px; background: transparent; }
-        
-        .send-btn { background: #075e54; color: white; border: none; width: 48px; height: 48px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .send-btn:active { transform: scale(0.9); background: #128c7e; }
+        .u-name { font-size: 11px; font-weight: bold; color: #128c7e; display: block; margin-bottom: 3px; }
 
-        .btn-icon { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 5px; }
+        /* Typing Area - Bottom se thora upar (Padding for Mobile Buttons) */
+        .footer { 
+            background: #f0f0f0; 
+            padding: 10px 10px 25px 10px; /* Niche 25px extra jagah buttons ke liye */
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .input-container {
+            flex: 1;
+            background: white;
+            border-radius: 25px;
+            padding: 2px 15px;
+            display: flex;
+            align-items: center;
+            border: 1px solid #ccc;
+        }
+
+        #msgInput { 
+            flex: 1; 
+            border: none; 
+            padding: 10px 0; 
+            outline: none; 
+            font-size: 16px;
+            background: transparent;
+        }
+
+        .send-circle { 
+            background: #128c7e; 
+            color: white; 
+            border: none; 
+            width: 45px; 
+            height: 45px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Search bar hide/show */
+        #searchArea { display: none; background: white; padding: 8px 15px; }
+        #searchArea input { width: 100%; padding: 8px; border-radius: 10px; border: 1px solid #ddd; outline: none; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <b id="userNameLabel">Chat</b>
-    <button class="btn-icon" onclick="toggleSearch()">🔍</button>
-    <button onclick="clearUI()" style="background:none; border:1px solid white; color:white; border-radius:5px; font-size:11px; padding:4px 8px;">Clear</button>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 35px; height: 35px; background: #ddd; border-radius: 50%;"></div>
+        <b id="userDisplay">Chat</b>
+    </div>
+    <div style="display: flex; gap: 15px;">
+        <span onclick="toggleS()" style="cursor:pointer; font-size: 18px;">🔍</span>
+        <span onclick="clearS()" style="cursor:pointer; font-size: 12px; border: 1px solid; padding: 2px 5px; border-radius: 4px;">Clear</span>
+    </div>
 </div>
 
-<div id="searchBox">
-    <input type="text" id="searchInput" placeholder="Search message..." oninput="filterMsg()">
+<div id="searchArea">
+    <input type="text" id="sInput" placeholder="Search message..." oninput="doSearch()">
 </div>
 
 <div id="messages"></div>
 
 <div class="footer">
-    <div class="input-box">
+    <div class="input-container">
         <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
     </div>
-    <button class="send-btn" id="sendBtn" onclick="send()">➤</button>
+    <button class="send-circle" onclick="sendMsg()">➤</button>
 </div>
 
 <script>
-    // --- Paste YOUR Config Details ---
+    // --- Apni Firebase Config Yahan Dalein ---
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY",
         authDomain: "public-chat-app-e75fc.firebaseapp.com",
         databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/",
         projectId: "public-chat-app-e75fc",
         storageBucket: "public-chat-app-e75fc.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        messagingSenderId: "YOUR_ID",
+        appId: "YOUR_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -76,57 +160,53 @@
 
     let myName = localStorage.getItem("chat_user") || prompt("Apna Naam Likhein:") || "Guest";
     localStorage.setItem("chat_user", myName);
-    document.getElementById('userNameLabel').innerText = myName;
+    document.getElementById('userDisplay').innerText = myName;
 
-    let allMsgs = [];
+    let msgList = [];
 
-    function toggleSearch() {
-        const box = document.getElementById('searchBox');
-        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    function toggleS() {
+        const s = document.getElementById('searchArea');
+        s.style.display = (s.style.display === 'block') ? 'none' : 'block';
     }
 
-    function send() {
+    function sendMsg() {
         const input = document.getElementById('msgInput');
         if(input.value.trim() !== "") {
             db.ref('chats').push({
                 name: myName,
                 text: input.value,
-                time: Date.now()
+                t: Date.now()
             });
             input.value = "";
         }
     }
 
-    // Enter key se send
-    document.getElementById('msgInput').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') send();
-    });
+    document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMsg(); });
 
-    function clearUI() { document.getElementById('messages').innerHTML = ""; }
+    function clearS() { document.getElementById('messages').innerHTML = ""; }
 
-    function filterMsg() {
-        const q = document.getElementById('searchInput').value.toLowerCase();
-        display(allMsgs.filter(m => m.text.toLowerCase().includes(q)));
+    function doSearch() {
+        const q = document.getElementById('sInput').value.toLowerCase();
+        render(msgList.filter(m => m.text.toLowerCase().includes(q)));
     }
 
-    function display(list) {
-        const cont = document.getElementById('messages');
-        cont.innerHTML = "";
+    function render(list) {
+        const container = document.getElementById('messages');
+        container.innerHTML = "";
         list.forEach(m => {
             const d = document.createElement('div');
             d.className = m.name === myName ? 'msg my-msg' : 'msg other-msg';
-            // Agar naam na ho (undefined) to 'Guest' dikhaye
-            const senderName = m.name || "Guest";
-            d.innerHTML = `<span class="u-name">${senderName}</span>${m.text}`;
-            cont.appendChild(d);
+            const n = m.name || "Guest";
+            d.innerHTML = `<span class="u-name">${n}</span>${m.text}`;
+            container.appendChild(d);
         });
-        cont.scrollTop = cont.scrollHeight;
+        container.scrollTop = container.scrollHeight;
     }
 
     db.ref('chats').on('value', (snap) => {
-        allMsgs = [];
-        snap.forEach(c => { allMsgs.push(c.val()); });
-        filterMsg();
+        msgList = [];
+        snap.forEach(c => { msgList.push(c.val()); });
+        doSearch();
     });
 </script>
 </body>
