@@ -2,117 +2,131 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chat App</title>
+    <title>Easy Chat</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; background: #e5ddd5; overflow: hidden; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: #e5ddd5; }
         
-        /* Fixed Header */
-        .header { background: #075e54; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; min-height: 55px; }
-        .header b { font-size: 16px; }
+        /* Header Fix */
+        .header { background: #075e54; color: white; padding: 12px 15px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; }
+        .header b { flex: 1; font-size: 18px; }
 
-        /* Search Bar Area */
-        #searchContainer { background: #fff; padding: 5px 10px; display: none; border-bottom: 1px solid #ccc; }
-        #searchInput { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd; outline: none; }
+        /* Search Bar */
+        #searchBox { display: none; background: white; padding: 8px; border-bottom: 1px solid #ccc; }
+        #searchBox input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; outline: none; }
 
-        /* Scrollable Chat Area */
-        #messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; background: #e5ddd5; }
+        /* Chat Messages Area */
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; padding-bottom: 20px; }
         
-        /* Bubbles Design */
-        .msg { margin-bottom: 8px; padding: 6px 10px; border-radius: 8px; max-width: 85%; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
-        .my-msg { align-self: flex-end; background: #dcf8c6; border: 1px solid #c7e5b0; }
-        .other-msg { align-self: flex-start; background: white; border: 1px solid #ddd; }
+        /* Message Bubbles */
+        .msg { margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; max-width: 80%; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; line-height: 1.4; }
+        .my-msg { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .other-msg { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
         
-        .user-name { font-size: 10px; font-weight: bold; color: #075e54; display: block; margin-bottom: 2px; }
+        .u-name { font-size: 11px; font-weight: bold; color: #075e54; display: block; margin-bottom: 3px; }
 
-        /* Bottom Input Bar - Fixed at bottom */
-        .input-area { background: #f0f0f0; padding: 8px; display: flex; align-items: center; border-top: 1px solid #ddd; }
-        #msgInput { flex: 1; padding: 10px 15px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 14px; }
-        #sendBtn { background: #075e54; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; margin-left: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        /* Bottom Typing Bar - Fixed and Easy */
+        .footer { background: #f0f0f0; padding: 10px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #ddd; }
+        .input-box { flex: 1; background: white; border-radius: 25px; display: flex; align-items: center; padding: 2px 15px; border: 1px solid #ccc; }
+        #msgInput { flex: 1; border: none; padding: 12px 0; outline: none; font-size: 16px; background: transparent; }
+        
+        .send-btn { background: #075e54; color: white; border: none; width: 48px; height: 48px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .send-btn:active { transform: scale(0.9); background: #128c7e; }
 
-        .icon-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .btn-icon { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 5px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <b id="displayingName">Chat</b>
-    <div>
-        <button class="icon-btn" onclick="toggleSearch()">🔍</button>
-        <button onclick="clearLocalChat()" style="background:none; border:1px solid white; color:white; border-radius:4px; font-size:10px; margin-left:5px; padding:2px 5px;">Clear</button>
-    </div>
+    <b id="userNameLabel">Chat</b>
+    <button class="btn-icon" onclick="toggleSearch()">🔍</button>
+    <button onclick="clearUI()" style="background:none; border:1px solid white; color:white; border-radius:5px; font-size:11px; padding:4px 8px;">Clear</button>
 </div>
 
-<div id="searchContainer">
-    <input type="text" id="searchInput" placeholder="Search message..." oninput="filterMessages()">
+<div id="searchBox">
+    <input type="text" id="searchInput" placeholder="Search message..." oninput="filterMsg()">
 </div>
 
 <div id="messages"></div>
 
-<div class="input-area">
-    <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') send()">
-    <button id="sendBtn" onclick="send()">➤</button>
+<div class="footer">
+    <div class="input-box">
+        <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="send()">➤</button>
 </div>
 
 <script>
-    // Paste YOUR Firebase Config here
+    // --- Paste YOUR Config Details ---
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY",
         authDomain: "public-chat-app-e75fc.firebaseapp.com",
         databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/",
         projectId: "public-chat-app-e75fc",
         storageBucket: "public-chat-app-e75fc.appspot.com",
-        messagingSenderId: "YOUR_ID",
-        appId: "YOUR_ID"
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let userName = localStorage.getItem("chat_user_name") || prompt("Naam Likhein:") || "Guest";
-    localStorage.setItem("chat_user_name", userName);
-    document.getElementById('displayingName').innerText = userName;
+    let myName = localStorage.getItem("chat_user") || prompt("Apna Naam Likhein:") || "Guest";
+    localStorage.setItem("chat_user", myName);
+    document.getElementById('userNameLabel').innerText = myName;
 
-    let allMessages = [];
+    let allMsgs = [];
 
     function toggleSearch() {
-        const s = document.getElementById('searchContainer');
-        s.style.display = (s.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function filterMessages() {
-        const q = document.getElementById('searchInput').value.toLowerCase();
-        render(allMessages.filter(m => m.text.toLowerCase().includes(q)));
+        const box = document.getElementById('searchBox');
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
     }
 
     function send() {
-        const i = document.getElementById('msgInput');
-        if(i.value.trim() !== "") {
-            db.ref('chats').push({ name: userName, text: i.value, timestamp: Date.now() });
-            i.value = "";
+        const input = document.getElementById('msgInput');
+        if(input.value.trim() !== "") {
+            db.ref('chats').push({
+                name: myName,
+                text: input.value,
+                time: Date.now()
+            });
+            input.value = "";
         }
     }
 
-    function clearLocalChat() { document.getElementById('messages').innerHTML = ""; }
+    // Enter key se send
+    document.getElementById('msgInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') send();
+    });
 
-    function render(msgs) {
-        const c = document.getElementById('messages');
-        c.innerHTML = "";
-        msgs.forEach(m => {
-            const div = document.createElement('div');
-            div.className = m.name === userName ? 'msg my-msg' : 'msg other-msg';
-            div.innerHTML = `<span class="user-name">${m.name}</span>${m.text}`;
-            c.appendChild(div);
+    function clearUI() { document.getElementById('messages').innerHTML = ""; }
+
+    function filterMsg() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        display(allMsgs.filter(m => m.text.toLowerCase().includes(q)));
+    }
+
+    function display(list) {
+        const cont = document.getElementById('messages');
+        cont.innerHTML = "";
+        list.forEach(m => {
+            const d = document.createElement('div');
+            d.className = m.name === myName ? 'msg my-msg' : 'msg other-msg';
+            // Agar naam na ho (undefined) to 'Guest' dikhaye
+            const senderName = m.name || "Guest";
+            d.innerHTML = `<span class="u-name">${senderName}</span>${m.text}`;
+            cont.appendChild(d);
         });
-        c.scrollTop = c.scrollHeight;
+        cont.scrollTop = cont.scrollHeight;
     }
 
     db.ref('chats').on('value', (snap) => {
-        allMessages = [];
-        snap.forEach(child => { allMessages.push(child.val()); });
-        filterMessages();
+        allMsgs = [];
+        snap.forEach(c => { allMsgs.push(c.val()); });
+        filterMsg();
     });
 </script>
 </body>
