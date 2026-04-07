@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Chat Dark</title>
+    <title>Family Chat Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             background-color: #0b141a; 
             display: flex; 
             flex-direction: column; 
@@ -19,7 +19,7 @@
             color: #e9edef;
         }
 
-        /* ڈارک ہیڈر پٹی */
+        /* واٹس ایپ اسٹائل ڈارک ہیڈر */
         .header-strip {
             background-color: #202c33;
             color: #e9edef;
@@ -38,11 +38,11 @@
             padding: 10px 15px; 
             display: flex; 
             flex-direction: column; 
-            background-image: linear-gradient(rgba(11, 20, 26, 0.95), rgba(11, 20, 26, 0.95)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
+            background-image: linear-gradient(rgba(11, 20, 26, 0.96), rgba(11, 20, 26, 0.96)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
             background-attachment: fixed;
         }
 
-        /* ڈارک میسج ببلز */
+        /* میسج ببلز */
         .message { 
             margin-bottom: 8px; 
             padding: 8px 12px; 
@@ -51,6 +51,7 @@
             position: relative; 
             font-size: 15px; 
             box-shadow: 0 1px 0.5px rgba(0,0,0,0.5); 
+            line-height: 1.4;
         }
 
         .message.sent { 
@@ -71,12 +72,13 @@
 
         .msg-meta {
             font-size: 9px;
-            color: rgba(233, 237, 239, 0.6);
+            color: rgba(233, 237, 239, 0.5);
             text-align: right;
-            margin-top: 4px;
+            margin-top: 5px;
             display: block;
         }
 
+        /* ان پٹ ایریا */
         .footer { 
             display: flex; 
             padding: 10px; 
@@ -114,6 +116,7 @@
             align-items: center; 
             justify-content: center; 
             flex-shrink: 0; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
         }
     </style>
 </head>
@@ -144,7 +147,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let userName = localStorage.getItem('chat_user') || prompt("نام لکھیں:") || "Guest";
+        let userName = localStorage.getItem('chat_user') || prompt("اپنا نام لکھیں:") || "Guest";
         localStorage.setItem('chat_user', userName);
 
         function sendMessage() {
