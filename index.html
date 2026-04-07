@@ -2,61 +2,120 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Chat</title>
+    <title>Public Group Chat</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #e5ddd5; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; }
-        .msg-box { background: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #e5ddd5; }
+        
+        /* Header */
+        .header { background: #075e54; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10; }
+        .header-btns { display: flex; gap: 10px; align-items: center; }
+        
+        /* Search Bar Hide/Show logic */
+        #searchContainer { 
+            background: #fff; padding: 10px; display: none; 
+            border-bottom: 1px solid #ddd; animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        #searchInput { width: 90%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
+
+        /* Chat Area */
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
+        .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 10px; max-width: 80%; border: 1px solid #ccc; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .my-msg { align-self: flex-end; background: #dcf8c6; border-color: #c7e5b0; }
+        .other-msg { align-self: flex-start; background: white; border-color: #ddd; }
+        
+        .user-name { font-size: 10px; font-weight: bold; color: #075e54; margin-bottom: 3px; display: block; }
         .input-area { display: flex; padding: 10px; background: #f0f0f0; border-top: 1px solid #ddd; }
-        input { flex: 1; padding: 12px; border: none; border-radius: 20px; outline: none; }
-        button { margin-left: 10px; padding: 10px 20px; background: #075e54; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        input#msgInput { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        
+        /* Icons/Buttons */
+        .icon-btn { background: transparent; border: none; color: white; cursor: pointer; font-size: 20px; }
+        .clear-btn { background: #128c7e; border: 1px solid white; color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; }
     </style>
 </head>
 <body>
 
+<div class="header">
+    <span id="displayingName">Chat Room</span>
+    <div class="header-btns">
+        <button class="icon-btn" onclick="toggleSearch()">🔍</button>
+        <button class="clear-btn" onclick="clearLocalChat()">Clear</button>
+    </div>
+</div>
+
+<div id="searchContainer">
+    <input type="text" id="searchInput" placeholder="Search in chat..." oninput="filterMessages()">
+</div>
+
 <div id="messages"></div>
+
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Write a message...">
-    <button onclick="send()">Send</button>
+    <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') send()">
 </div>
 
 <script>
-    // 1. Apne Firebase ki asli settings yahan paste karein
+    // 1. Apni Firebase Details yahan paste karein
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY",
         authDomain: "public-chat-app-e75fc.firebaseapp.com",
         databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/",
         projectId: "public-chat-app-e75fc",
         storageBucket: "public-chat-app-e75fc.appspot.com",
-        messagingSenderId: "YOUR_ID",
+        messagingSenderId: "YOUR_SENDER_ID",
         appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Message bhejne ka function
+    let userName = localStorage.getItem("chat_user_name") || prompt("Apna Naam Likhein:") || "Guest";
+    localStorage.setItem("chat_user_name", userName);
+    document.getElementById('displayingName').innerText = userName;
+
+    let allMessages = []; // Local copy for searching
+
+    // Toggle Search Bar
+    function toggleSearch() {
+        const bar = document.getElementById('searchContainer');
+        bar.style.display = (bar.style.display === 'block') ? 'none' : 'block';
+        if(bar.style.display === 'block') document.getElementById('searchInput').focus();
+    }
+
+    // Filter Messages
+    function filterMessages() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        renderMessages(allMessages.filter(m => m.text.toLowerCase().includes(query)));
+    }
+
     function send() {
         const input = document.getElementById('msgInput');
         if(input.value.trim() !== "") {
-            db.ref('chats').push({
-                text: input.value,
-                timestamp: Date.now()
-            });
+            db.ref('chats').push({ name: userName, text: input.value, timestamp: Date.now() });
             input.value = "";
         }
     }
 
-    // 3. Messages dikhane ka function
-    db.ref('chats').on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'msg-box';
-        msgDiv.innerText = data.text;
-        document.getElementById('messages').appendChild(msgDiv);
-        window.scrollTo(0, document.body.scrollHeight);
+    function clearLocalChat() { document.getElementById('messages').innerHTML = ""; }
+
+    function renderMessages(msgs) {
+        const container = document.getElementById('messages');
+        container.innerHTML = "";
+        msgs.forEach(data => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = data.name === userName ? 'msg my-msg' : 'msg other-msg';
+            msgDiv.innerHTML = `<span class="user-name">${data.name}</span><span>${data.text}</span>`;
+            container.appendChild(msgDiv);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    db.ref('chats').on('value', (snapshot) => {
+        allMessages = [];
+        snapshot.forEach(child => { allMessages.push(child.val()); });
+        filterMessages(); // Update screen while keeping search active
     });
 </script>
 </body>
