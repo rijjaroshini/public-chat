@@ -156,19 +156,97 @@
         .del-menu {
             display: none;
             position: absolute;
-            bottom: 40px;
-            background: rgba(30,24,60,0.97);
+            bottom: 110%;
+            background: rgba(20,15,50,0.97);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
+            border-radius: 14px;
             z-index: 300;
             overflow: hidden;
             min-width: 170px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
             backdrop-filter: blur(20px);
         }
 
         .sent .del-menu { right: 0; }
         .received .del-menu { left: 0; }
+
+        /* ===== EMOJI PICKER ===== */
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            background: rgba(20,15,50,0.97);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            z-index: 400;
+            padding: 8px 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            gap: 6px;
+            flex-direction: row;
+            align-items: center;
+            animation: popUp 0.2s ease;
+        }
+
+        @keyframes popUp {
+            from { opacity: 0; transform: scale(0.7) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .sent .emoji-picker { right: 0; }
+        .received .emoji-picker { left: 0; }
+
+        .emoji-picker.show { display: flex; }
+
+        .ep-btn {
+            font-size: 22px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: transform 0.15s, background 0.15s;
+            line-height: 1;
+        }
+        .ep-btn:hover { transform: scale(1.35); background: rgba(255,255,255,0.1); }
+        .ep-btn:active { transform: scale(1.1); }
+
+        /* ===== REACTION BADGES ===== */
+        .reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sent .reactions { justify-content: flex-end; }
+        .received .reactions { justify-content: flex-start; }
+
+        .react-badge {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: transform 0.15s, background 0.15s;
+            backdrop-filter: blur(6px);
+            animation: popBadge 0.25s ease;
+        }
+
+        @keyframes popBadge {
+            0%   { transform: scale(0); opacity: 0; }
+            70%  { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .react-badge:hover { background: rgba(167,139,250,0.2); transform: scale(1.1); }
+        .react-badge.mine { border-color: var(--accent); background: rgba(167,139,250,0.2); }
+
+        .react-count { font-size: 10px; font-weight: 600; opacity: 0.85; }
 
         .del-menu button {
             display: block; width: 100%; padding: 12px 16px;
@@ -345,16 +423,18 @@
         let user = localStorage.getItem('user') || prompt("نام لکھیں:") || "Guest";
         localStorage.setItem('user', user);
 
+        const EMOJIS = ['❤️','😂','😮','😢','😡','👍','🔥','🥰'];
+
         function toggleTheme() {
             document.body.classList.toggle('light-theme');
             localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
         }
-
         if(localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
 
         function clearAll() {
             if(confirm("کیا آپ تمام پیغامات مٹانا چاہتے ہیں؟")) {
                 db.ref('chats').remove();
+                db.ref('reactions').remove();
             }
         }
 
@@ -373,35 +453,112 @@
             }
         }
 
-        function showMenu(key) {
+        // Close all popups
+        function closeAll() {
             document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none');
-            document.getElementById('menu-' + key).style.display = 'block';
+            document.querySelectorAll('.emoji-picker').forEach(p => p.classList.remove('show'));
         }
 
+        // Long press detection
+        let pressTimer = null;
+
+        function onMsgPress(key) {
+            pressTimer = setTimeout(() => {
+                closeAll();
+                const picker = document.getElementById('ep-' + key);
+                if(picker) picker.classList.add('show');
+            }, 450);
+        }
+
+        function onMsgRelease(key) {
+            if(pressTimer) clearTimeout(pressTimer);
+        }
+
+        function onMsgTap(key) {
+            closeAll();
+            const menu = document.getElementById('menu-' + key);
+            if(menu) menu.style.display = 'block';
+        }
+
+        // Add / toggle emoji reaction
+        function react(key, emoji) {
+            closeAll();
+            const ref = db.ref(`reactions/${key}/${encodeURIComponent(emoji)}/${user.replace(/[.#$[\]]/g,'_')}`);
+            ref.once('value').then(snap => {
+                if(snap.exists()) ref.remove();
+                else ref.set(true);
+            });
+        }
+
+        // Render reactions under a message
+        function renderReactions(key, reactionsData) {
+            const container = document.getElementById('reacts-' + key);
+            if(!container) return;
+            container.innerHTML = '';
+            if(!reactionsData) return;
+
+            Object.entries(reactionsData).forEach(([encodedEmoji, users]) => {
+                const emoji = decodeURIComponent(encodedEmoji);
+                const userList = Object.keys(users || {});
+                if(userList.length === 0) return;
+                const isMine = userList.includes(user.replace(/[.#$[\]]/g,'_'));
+
+                const badge = document.createElement('span');
+                badge.className = 'react-badge' + (isMine ? ' mine' : '');
+                badge.innerHTML = `${emoji} <span class="react-count">${userList.length}</span>`;
+                badge.title = userList.join(', ');
+                badge.onclick = (e) => { e.stopPropagation(); react(key, emoji); };
+                container.appendChild(badge);
+            });
+        }
+
+        // Listen for new messages
         db.ref('chats').on('child_added', (snap) => {
             let data = snap.val();
             let key = snap.key;
+            let isSent = data.name === user;
+
             let div = document.createElement('div');
             div.id = 'msg-' + key;
-            div.className = "msg " + (data.name === user ? "sent" : "received");
-            div.onclick = () => showMenu(key);
+            div.className = "msg " + (isSent ? "sent" : "received");
+
+            // Build emoji picker buttons
+            let epBtns = EMOJIS.map(e =>
+                `<button class="ep-btn" onclick="event.stopPropagation();react('${key}','${e}')">${e}</button>`
+            ).join('');
 
             div.innerHTML = `
                 <div class="avatar" style="background:${getColor(data.name)}">${data.name.charAt(0).toUpperCase()}</div>
-                <div class="bubble">
-                    <div class="msg-body">
-                        <span class="name" style="color:${getColor(data.name)}">${data.name}</span>
-                        <span class="msg-text">${data.text}</span>
-                        <span class="meta">${data.time}</span>
-                    </div>
+                <div style="display:flex;flex-direction:column;gap:3px;position:relative;">
+                    <!-- Emoji Picker (long press) -->
+                    <div id="ep-${key}" class="emoji-picker">${epBtns}</div>
+                    <!-- Delete Menu (tap) -->
                     <div id="menu-${key}" class="del-menu">
-                        <button onclick="event.stopPropagation();document.getElementById('msg-${key}').remove()">❌ میرے لیے ڈیلیٹ</button>
-                        ${data.name === user ? `<button onclick="event.stopPropagation();firebase.database().ref('chats/${key}').remove()">🗑️ سب کے لیے ڈیلیٹ</button>` : ''}
+                        <button onclick="event.stopPropagation();document.getElementById('msg-${key}').remove();closeAll()">❌ میرے لیے ڈیلیٹ</button>
+                        ${isSent ? `<button onclick="event.stopPropagation();db.ref('chats/${key}').remove();db.ref('reactions/${key}').remove();closeAll()">🗑️ سب کے لیے ڈیلیٹ</button>` : ''}
                     </div>
+                    <div class="bubble"
+                        onmousedown="onMsgPress('${key}')" onmouseup="onMsgRelease('${key}')"
+                        ontouchstart="onMsgPress('${key}')" ontouchend="onMsgRelease('${key}')"
+                        onclick="onMsgTap('${key}')">
+                        <div class="msg-body">
+                            <span class="name" style="color:${getColor(data.name)}">${data.name}</span>
+                            <span class="msg-text">${data.text}</span>
+                            <span class="meta">${data.time}</span>
+                        </div>
+                    </div>
+                    <!-- Reaction Badges -->
+                    <div id="reacts-${key}" class="reactions"></div>
                 </div>
             `;
+
             document.getElementById('messages').appendChild(div);
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+
+            // Listen for reactions on this message
+            db.ref(`reactions/${key}`).on('value', (rSnap) => {
+                renderReactions(key, rSnap.val());
+            });
         });
 
         db.ref('chats').on('child_removed', (snap) => {
@@ -409,10 +566,7 @@
             if(el) el.remove();
         });
 
-        window.onclick = (e) => {
-            if (!e.target.closest('.msg')) document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none');
-        };
-
+        window.onclick = (e) => { if (!e.target.closest('.msg')) closeAll(); };
         document.getElementById('inp').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
     </script>
 </body>
