@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Family Chat Pro - پروفائل تصویر اور نوٹ کے ساتھ</title>
+    <title>Family Chat Pro - نام میں ترمیم کے ساتھ</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -180,13 +180,16 @@
         .tab-btn { flex:1; padding: 8px; border-radius: 12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.75rem; }
         .tab-btn.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color:white; }
         .error-msg { color:#f87171; font-size:0.7rem; text-align:center; margin-top:5px; }
+        
+        /* Toast message */
+        .toast-msg { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1e293b; border-radius:40px; padding:8px 18px; z-index:9999; font-size:0.8rem; white-space:nowrap; }
     </style>
 </head>
 <body>
 
     <!-- HEADER -->
     <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬 Family Chat</span></div>
+        <div class="room-title" id="headerLeft"><span>💬 Chat</span></div>
         <div class="header-right">
             <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
@@ -240,53 +243,84 @@
     <script>
         firebase.initializeApp({ apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y", authDomain: "public-chat-app-e75fc.firebaseapp.com", databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/", projectId: "public-chat-app-e75fc" });
         const db = firebase.database();
+        
+        // Get current user from localStorage or prompt
         let currentUser = localStorage.getItem('user');
-        if (!currentUser || currentUser === "null") { currentUser = prompt("اپنا نام لکھیں:") || "User_" + Math.floor(Math.random() * 1000); localStorage.setItem('user', currentUser); }
-        const safeUser = currentUser.replace(/[.#$[\] /]/g,'_');
-        document.getElementById('userChip').innerHTML = "👤 " + currentUser;
+        if (!currentUser || currentUser === "null") { 
+            currentUser = prompt("اپنا نام لکھیں:") || "User_" + Math.floor(Math.random() * 1000); 
+            localStorage.setItem('user', currentUser); 
+        }
+        let safeUser = currentUser.replace(/[.#$[\] /]/g,'_');
         
         // Profile references
         const profilesRef = db.ref('user_profiles');
-        let currentUserProfile = { pic: null, note: "ہیلو! میں یہاں ہوں۔" };
+        let currentUserProfile = { pic: null, note: "ہیلو! میں یہاں ہوں۔", displayName: currentUser };
         
-        // Save profile to Firebase
-        function saveProfileToDB(picBase64, noteText) {
-            let update = { name: currentUser, updatedAt: Date.now() };
-            if (picBase64 !== undefined) update.pic = picBase64;
-            if (noteText !== undefined) update.note = noteText;
-            profilesRef.child(safeUser).update(update);
-        }
-        
-        // Load profile for any user
-        async function getUserProfile(userId, userName) {
-            const snap = await profilesRef.child(userId).once('value');
-            if (snap.exists()) return snap.val();
-            return { pic: null, note: "مزاج ہے؟", name: userName };
-        }
-        
-        // Initialize current user profile
-        profilesRef.child(safeUser).once('value', snap => {
-            if (!snap.exists()) {
-                saveProfileToDB(null, currentUserProfile.note);
-            } else {
+        // Load current user profile (including display name)
+        async function loadCurrentUserProfile() {
+            const snap = await profilesRef.child(safeUser).once('value');
+            if (snap.exists()) {
                 const data = snap.val();
                 if (data.note) currentUserProfile.note = data.note;
                 if (data.pic) currentUserProfile.pic = data.pic;
+                if (data.displayName) {
+                    currentUserProfile.displayName = data.displayName;
+                    // If display name differs from currentUser variable, update currentUser and localStorage
+                    if (data.displayName !== currentUser) {
+                        currentUser = data.displayName;
+                        localStorage.setItem('user', currentUser);
+                        document.getElementById('userChip').innerHTML = "👤 " + currentUser;
+                        // Update presence name
+                        db.ref('presence/' + safeUser).update({ name: currentUser });
+                    }
+                } else {
+                    // No displayName stored, store current one
+                    profilesRef.child(safeUser).update({ displayName: currentUser });
+                }
+            } else {
+                // Initialize profile
+                profilesRef.child(safeUser).set({ displayName: currentUser, note: currentUserProfile.note, pic: null, createdAt: Date.now() });
             }
-        });
+        }
+        loadCurrentUserProfile();
         
-        // Open my profile edit modal
+        // Save profile (including name change)
+        async function saveProfileToDB(picBase64, noteText, newName) {
+            let update = { updatedAt: Date.now() };
+            if (picBase64 !== undefined) update.pic = picBase64;
+            if (noteText !== undefined) update.note = noteText;
+            if (newName !== undefined && newName.trim() !== "") {
+                update.displayName = newName.trim();
+                // Also update currentUser and localStorage
+                currentUser = newName.trim();
+                localStorage.setItem('user', currentUser);
+                document.getElementById('userChip').innerHTML = "👤 " + currentUser;
+                // Update presence record
+                await db.ref('presence/' + safeUser).update({ name: currentUser });
+                // Also update any other references (profile note)
+                currentUserProfile.displayName = currentUser;
+            }
+            await profilesRef.child(safeUser).update(update);
+            if (newName) {
+                // Refresh online bar to show updated name
+                refreshOnlineBar();
+                // Reload messages to reflect new name in future messages (old ones remain)
+            }
+        }
+        
+        // Open my profile edit modal with name field
         function openMyProfileModal() {
             const modal = document.getElementById('profileModal');
             const content = document.getElementById('profileModalContent');
             content.innerHTML = `
-                <h3>📸 میرا پروفائل</h3>
+                <h3>📝 میرا پروفائل (ترمیم)</h3>
                 <div style="text-align:center">
                     <div class="profile-pic-large" id="myProfilePicPreview">
                         ${currentUserProfile.pic ? `<img src="${currentUserProfile.pic}" alt="profile">` : `<span style="font-size:2rem">${currentUser.charAt(0).toUpperCase()}</span>`}
                     </div>
                     <label class="file-input-label">📷 تصویر تبدیل کریں<input type="file" id="profileImageInput" accept="image/*"></label>
                 </div>
+                <input class="modal-field" id="profileNameInput" placeholder="اپنا نام تبدیل کریں" value="${currentUser.replace(/"/g, '&quot;')}" maxlength="30">
                 <textarea id="profileNoteInput" class="modal-field" rows="2" placeholder="اپنی حالت (Status) لکھیں..." maxlength="80">${currentUserProfile.note || ''}</textarea>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeProfileModal()">Cancel</button>
@@ -319,30 +353,43 @@
             };
         }
         
-        function updateMyProfile() {
+        async function updateMyProfile() {
             const newNote = document.getElementById('profileNoteInput').value.trim();
+            const newName = document.getElementById('profileNameInput').value.trim();
+            if (newName === "") {
+                showToast("نام خالی نہیں ہو سکتا", "red");
+                return;
+            }
             if (newNote) currentUserProfile.note = newNote;
-            saveProfileToDB(currentUserProfile.pic, currentUserProfile.note);
+            await saveProfileToDB(currentUserProfile.pic, currentUserProfile.note, newName);
             closeProfileModal();
             showToast("پروفائل اپڈیٹ ہو گیا", "green");
-            refreshOnlineBar(); // force refresh
+            // Force reload of messages display to reflect new name in future sends, but also re-render online bar
+            // No need to reload chat messages as they store old name; new messages will use new name
         }
         
         function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
         
-        // View other user's profile
-        async function viewUserProfile(userName, userId) {
-            const profile = await getUserProfile(userId, userName);
-            const picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span style="font-size:2rem">${userName.charAt(0).toUpperCase()}</span>`;
+        // View other user's profile (display name from their profile)
+        async function viewUserProfile(userId, currentDisplayName) {
+            const snap = await profilesRef.child(userId).once('value');
+            let profile = { pic: null, note: "مزاج ہے؟", displayName: currentDisplayName };
+            if (snap.exists()) {
+                const data = snap.val();
+                if (data.pic) profile.pic = data.pic;
+                if (data.note) profile.note = data.note;
+                if (data.displayName) profile.displayName = data.displayName;
+            }
+            const picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span style="font-size:2rem">${profile.displayName.charAt(0).toUpperCase()}</span>`;
             const modal = document.getElementById('profileModal');
             document.getElementById('profileModalContent').innerHTML = `
-                <h3>👤 ${userName}</h3>
+                <h3>👤 ${profile.displayName}</h3>
                 <div style="text-align:center">
                     <div class="profile-pic-large">${picHtml}</div>
-                    <div class="profile-note">📝 "${profile.note || 'کوئی نوٹ نہیں'}"</div>
+                    <div class="profile-note">📝 "${profile.note}"</div>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn-primary" onclick="sendDmFromProfile('${userName.replace(/'/g, "\\'")}')">💬 پیغام بھیجیں</button>
+                    <button class="btn-primary" onclick="sendDmFromProfile('${profile.displayName.replace(/'/g, "\\'")}')">💬 پیغام بھیجیں</button>
                     <button class="btn-cancel" onclick="closeProfileModal()">بند کریں</button>
                 </div>
             `;
@@ -351,7 +398,7 @@
         
         function sendDmFromProfile(targetUser) { closeProfileModal(); sendDmRequest(targetUser); }
         
-        // Online bar with profile pictures
+        // Online bar with profile pictures and updated names
         let onlineUsersListener = null;
         function refreshOnlineBar() {
             if (onlineUsersListener) db.ref('presence').off('value', onlineUsersListener);
@@ -362,16 +409,22 @@
                 let usersList = [];
                 snap.forEach(child => { const u = child.val(); if (u && u.name) usersList.push({ name: u.name, id: child.key }); });
                 for (let u of usersList) {
-                    const profile = await getUserProfile(u.id, u.name);
-                    const isMe = u.name === currentUser;
+                    const profileSnap = await profilesRef.child(u.id).once('value');
+                    let profile = { pic: null, displayName: u.name };
+                    if (profileSnap.exists()) {
+                        if (profileSnap.val().pic) profile.pic = profileSnap.val().pic;
+                        if (profileSnap.val().displayName) profile.displayName = profileSnap.val().displayName;
+                    }
+                    const isMe = (u.id === safeUser);
+                    const displayName = isMe ? currentUser : profile.displayName;
                     const av = document.createElement('div');
                     av.className = 'user-avatar' + (isMe ? ' me' : '');
-                    av.title = isMe ? 'آپ کا پروفائل' : `${u.name} کی پروفائل دیکھیں`;
+                    av.title = isMe ? 'آپ کا پروفائل' : `${displayName} کی پروفائل دیکھیں`;
                     let picHtml = '';
                     if (profile.pic) picHtml = `<img src="${profile.pic}" alt="pic">`;
-                    else picHtml = `<span>${u.name.charAt(0).toUpperCase()}</span>`;
-                    av.innerHTML = `<div class="av-circle">${picHtml}<div class="online-dot"></div></div><div class="av-name">${isMe ? 'You' : u.name}</div>`;
-                    if (!isMe) av.onclick = () => viewUserProfile(u.name, u.id);
+                    else picHtml = `<span>${displayName.charAt(0).toUpperCase()}</span>`;
+                    av.innerHTML = `<div class="av-circle">${picHtml}<div class="online-dot"></div></div><div class="av-name">${isMe ? 'You' : displayName}</div>`;
+                    if (!isMe) av.onclick = () => viewUserProfile(u.id, displayName);
                     else av.onclick = () => openMyProfileModal();
                     bar.appendChild(av);
                 }
@@ -379,7 +432,7 @@
             });
         }
         
-        // ========== EXISTING CHAT LOGIC ==========
+        // ========== EXISTING CHAT LOGIC (with updated header text) ==========
         let currentRoom = 'public';
         let chatRef = db.ref('chats');
         let chatListener = null;
@@ -392,9 +445,16 @@
             if (currentTypingListener) currentTypingListener();
             currentRoom = roomId;
             const hl = document.getElementById('headerLeft');
-            if (isDm) { chatRef = db.ref('dm_chats/' + roomId + '/messages'); hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`; }
-            else if (isPrivate) { chatRef = db.ref('private_rooms/' + roomId + '/messages'); hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`; }
-            else { chatRef = db.ref('chats'); hl.innerHTML = `<span>💬 Family Chat</span>`; }
+            if (isDm) { 
+                chatRef = db.ref('dm_chats/' + roomId + '/messages'); 
+                hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`; 
+            } else if (isPrivate) { 
+                chatRef = db.ref('private_rooms/' + roomId + '/messages'); 
+                hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`; 
+            } else { 
+                chatRef = db.ref('chats'); 
+                hl.innerHTML = `<span>💬 Chat</span>`;   // Changed from "Family Chat" to "Chat"
+            }
             resetSelectModeUI(false);
             loadMessages();
             setupTypingForRoom(roomId);
@@ -466,7 +526,7 @@
         function toggleEmojiPanel() { const p = document.getElementById('emojiPanel'); if(p.classList.contains('show')) p.classList.remove('show'); else { if(p.children.length===0) commonEmojis.forEach(e=>{ const span=document.createElement('span'); span.className='emoji-item'; span.textContent=e; span.onclick=()=>{ document.getElementById('inp').value+=e; p.classList.remove('show'); }; p.appendChild(span); }); p.classList.add('show'); } }
         function closeEmojiPanel() { document.getElementById('emojiPanel').classList.remove('show'); }
         
-        // DM and rooms (abbreviated but functional)
+        // DM and rooms
         function getDmRoomId(a,b) { return [a.replace(/[.#$[\] /]/g,'_'),b.replace(/[.#$[\] /]/g,'_')].sort().join('__dm__'); }
         function sendDmRequest(target) { if(target===currentUser) return showToast("خود سے DM نہیں",'red'); const targetSafe=target.replace(/[.#$[\] /]/g,'_'); const reqRef=db.ref('dm_requests/'+targetSafe).push({ from:currentUser, fromSafe:safeUser, status:'pending', t:Date.now() }); showToast(`Request sent to ${target}`,'green'); reqRef.on('value', snap=>{ if(snap.exists() && snap.val().status==='accepted'){ reqRef.off(); const roomId=getDmRoomId(currentUser,target); switchRoom(roomId,target,false,true,target); showToast(`${target} نے accept کر لیا!`,'green'); } }); setTimeout(()=>reqRef.off(), 60000); }
         db.ref('dm_requests/'+safeUser).on('child_added', snap=>{ const data=snap.val(); if(data?.status==='pending') showDmNotif(data.from, snap.key); });
@@ -478,7 +538,7 @@
         function createRoom(){ const rid=document.getElementById('newRoomId').value.trim(); const name=document.getElementById('newRoomName').value.trim(); const pass=document.getElementById('newRoomPass').value.trim(); if(!rid||!name||!pass) return; db.ref('private_rooms/'+rid).set({ name, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser }).then(()=>{ closeRoomModal(); switchRoom(rid,name,true,false,null); }); }
         function joinRoom(){ const rid=document.getElementById('joinRoomId').value.trim(); const pass=document.getElementById('joinPassword').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ closeRoomModal(); switchRoom(rid,snap.val().name,true,false,null); } else showToast('غلط room ID یا password','red'); }); }
         function deleteRoom(){ const rid=document.getElementById('deleteRoomId').value.trim(); const pass=document.getElementById('deleteRoomPass').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ snap.ref.remove(); if(currentRoom===rid) switchRoom('public','',false,false,null); closeRoomModal(); showToast('Room delete','red'); } }); }
-        function showToast(msg,col){ const t=document.createElement('div'); t.textContent=msg; t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid ${col==='green'?'#22c55e':'#f87171'};color:${col==='green'?'#22c55e':'#f87171'};padding:8px 18px;border-radius:40px;z-index:9999;font-size:0.8rem`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+        function showToast(msg,col){ const t=document.createElement('div'); t.className='toast-msg'; t.textContent=msg; t.style.border = `1px solid ${col==='green'?'#22c55e':'#f87171'}`; t.style.color = col==='green'?'#22c55e':'#f87171'; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
         
         // Init
         refreshOnlineBar();
@@ -486,7 +546,7 @@
         document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
         window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
         setupTypingForRoom('public');
-        setInterval(()=>{ presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
+        setInterval(()=>{ db.ref('presence/'+safeUser).set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
         const presRef = db.ref('presence/' + safeUser);
         presRef.set({ name: currentUser, online: true });
         presRef.onDisconnect().remove();
