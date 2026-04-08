@@ -2,7 +2,7 @@
 <html lang="ur">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Family Chat Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -28,6 +28,7 @@
             display: flex; flex-direction: column;
             overflow: hidden;
             padding-top: env(safe-area-inset-top);
+            touch-action: pan-y pinch-zoom; /* better touch */
         }
 
         /* HEADER */
@@ -38,6 +39,7 @@
             border-bottom: 1px solid var(--glass-border);
             backdrop-filter: blur(12px);
             z-index: 10; flex-shrink: 0;
+            gap: 8px;
         }
         .room-title { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; }
         .room-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -47,7 +49,7 @@
         .icon-btn:hover { background: rgba(168,85,247,0.25); }
         .leave-btn { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 4px 9px; border-radius: 12px; font-size: 0.68rem; cursor: pointer; flex-shrink: 0; }
 
-        /* ONLINE USERS BAR */
+        /* ONLINE USERS BAR + TYPING INDICATOR */
         .online-bar {
             display: flex; align-items: center; gap: 10px;
             padding: 8px 14px; overflow-x: auto;
@@ -72,29 +74,112 @@
         .user-avatar.me .av-name { color: #6366f1; }
         .no-online { font-size: 0.72rem; color: var(--text-dim); }
 
+        /* TYPING BAR */
+        .typing-indicator {
+            background: rgba(99,102,241,0.2);
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 5px 14px;
+            font-size: 0.7rem;
+            color: #a78bfa;
+            white-space: nowrap;
+            overflow-x: auto;
+            flex-shrink: 0;
+            backdrop-filter: blur(8px);
+        }
+        .typing-indicator span {
+            display: inline-block;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
         /* MESSAGES */
-        #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 11px; scrollbar-width: none; }
+        #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 11px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         #messages::-webkit-scrollbar { display: none; }
         .date-divider { text-align: center; margin: 14px 0 6px; }
         .date-divider span { background: rgba(255,255,255,0.08); padding: 3px 11px; border-radius: 10px; font-size: 0.68rem; color: var(--text-dim); }
-        .msg { max-width: 82%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; }
+        .msg { max-width: 82%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; position: relative; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
         .sent { align-self: flex-end; align-items: flex-end; }
         .received { align-self: flex-start; align-items: flex-start; }
         .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.93rem; position: relative; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid var(--glass-border); word-break: break-word; }
         .sent .bubble { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; border-bottom-right-radius: 4px; border: none; }
         .received .bubble { background: var(--glass-bg); border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; }
+        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .msg-info .info-name { color: #c084fc; font-weight: 600; }
         .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #1e293b; border: 1px solid var(--glass-border); border-radius: 12px; z-index: 200; width: 158px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .del-menu button { width: 100%; padding: 11px; border: none; background: none; color: white; text-align: left; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); }
+        .del-menu button { width: 100%; padding: 11px; border: none; background: none; color: white; text-align: left; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); transition: background 0.1s; }
+        .del-menu button:hover { background: rgba(255,255,255,0.08); }
         .deleted-msg { font-style: italic; opacity: 0.5; font-size: 0.83rem; }
+        
+        /* MULTI-SELECT CHECKBOX */
+        .msg-select-checkbox {
+            position: absolute;
+            left: -28px;
+            top: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+            z-index: 5;
+        }
+        .sent .msg-select-checkbox { left: auto; right: -28px; }
+        .msg.select-mode { margin-left: 28px; }
+        .sent.select-mode { margin-right: 28px; margin-left: 0; }
+        
+        /* SELECTION TOOLBAR */
+        .selection-toolbar {
+            background: #1e293b;
+            border-bottom: 1px solid var(--glass-border);
+            padding: 6px 14px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+        .selection-actions { display: flex; gap: 10px; }
+        .selection-actions button { background: rgba(255,255,255,0.1); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.7rem; font-weight: 600; }
+        .selection-actions .del-me-btn { background: rgba(248,113,113,0.2); color: #f87171; }
+        .selection-actions .del-everyone-btn { background: rgba(239,68,68,0.3); color: #ff9f9f; }
+        .cancel-select { background: transparent; border: 1px solid var(--glass-border); }
 
-        /* INPUT */
+        /* INPUT + EMOJI PICKER */
         .input-container { padding: 9px 14px 5px; background: rgba(15,23,42,0.5); flex-shrink: 0; }
-        .input-wrapper { background: rgba(30,41,59,0.9); border: 1px solid var(--glass-border); border-radius: 28px; display: flex; padding: 5px 5px 5px 16px; }
-        .input-wrapper input { flex: 1; background: none; border: none; color: white; font-size: 0.93rem; font-family: inherit; }
-        .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; color: var(--bg-dark); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+        .input-wrapper { background: rgba(30,41,59,0.9); border: 1px solid var(--glass-border); border-radius: 28px; display: flex; padding: 5px 5px 5px 16px; align-items: center; gap: 4px; }
+        .input-wrapper input { flex: 1; background: none; border: none; color: white; font-size: 0.93rem; font-family: inherit; padding: 8px 0; }
+        .emoji-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0 6px; color: #cbd5e1; transition: transform 0.1s; }
+        .emoji-btn:active { transform: scale(0.9); }
+        .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; color: var(--bg-dark); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .emoji-panel {
+            position: absolute;
+            bottom: 75px;
+            left: 10px;
+            right: 10px;
+            background: #1e293b;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            padding: 12px;
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .emoji-panel.show { display: grid; }
+        .emoji-item {
+            font-size: 1.7rem;
+            text-align: center;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 16px;
+            transition: background 0.1s;
+        }
+        .emoji-item:active { background: rgba(255,255,255,0.2); }
         .bottom-safe-bar { height: env(safe-area-inset-bottom,18px); background: #0f172a; width: 100%; flex-shrink: 0; }
 
         /* DM REQUEST NOTIFICATION */
@@ -140,14 +225,20 @@
         .spin { font-size: 2.2rem; display: inline-block; animation: spin 1.2s linear infinite; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .sending-state p { color: var(--text-dim); font-size: 0.85rem; margin-top: 10px; line-height: 1.5; }
+        
+        /* touch optimizations */
+        button, .icon-btn, .user-avatar, .send-btn, .emoji-btn, .room-item {
+            touch-action: manipulation;
+        }
     </style>
 </head>
 <body>
 
     <!-- HEADER -->
     <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬 Public Chat</span></div>
+        <div class="room-title" id="headerLeft"><span>💬</span></div> <!-- Family Chat text removed -->
         <div class="header-right">
+            <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
             <div class="user-chip" id="userChip">...</div>
         </div>
@@ -159,14 +250,31 @@
         <span class="no-online" id="noOnline">لوڈ ہو رہا ہے...</span>
     </div>
 
+    <!-- TYPING INDICATOR -->
+    <div id="typingIndicator" class="typing-indicator" style="display: none;">✍️ <span id="typingUsersText"></span> ٹائپ کر رہا ہے...</div>
+
     <!-- MESSAGES -->
     <div id="messages"></div>
 
-    <!-- INPUT -->
+    <!-- MULTI-SELECT TOOLBAR -->
+    <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+        <span id="selectedCount">0 selected</span>
+        <div class="selection-actions">
+            <button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button>
+            <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete for everyone</button>
+            <button class="cancel-select" onclick="toggleMultiSelectMode(false)">Cancel</button>
+        </div>
+    </div>
+
+    <!-- INPUT + EMOJI -->
     <div class="input-container">
         <div class="input-wrapper">
             <input type="text" id="inp" placeholder="پیغام لکھیں..." autocomplete="off">
+            <button class="emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
             <button class="send-btn" onclick="send()">↑</button>
+        </div>
+        <div id="emojiPanel" class="emoji-panel">
+            <!-- common emojis loaded via JS -->
         </div>
     </div>
     <div class="bottom-safe-bar"></div>
@@ -233,7 +341,7 @@
     </div>
 
     <script>
-        // ===== FIREBASE =====
+        // ===== FIREBASE ===== (same config)
         firebase.initializeApp({
             apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y",
             authDomain: "public-chat-app-e75fc.firebaseapp.com",
@@ -260,46 +368,22 @@
         let currentRoom = 'public';
         let chatRef = db.ref('chats');
         let chatListener = null;
-        let pendingDmKey = null;
-        let pendingDmTarget = null;
-        let pendingDmRef = null;
+        let pendingDmKey = null, pendingDmTarget = null, pendingDmRef = null;
+        
+        // ===== MULTI SELECT =====
+        let selectModeActive = false;
+        let selectedMsgKeys = new Set();
+        
+        // ===== TYPING =====
+        let typingTimeout = null;
+        let currentTypingListener = null;
 
-        // ===== ONLINE USERS BAR =====
-        db.ref('presence').on('value', snap => {
-            const bar = document.getElementById('onlineBar');
-            bar.innerHTML = '<span class="online-bar-label">🟢 Online:</span>';
-            if (!snap.exists()) {
-                bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>';
-                return;
-            }
-            let count = 0;
-            snap.forEach(child => {
-                const u = child.val();
-                if (!u || !u.name) return;
-                count++;
-                const isMe = u.name === currentUser;
-                const av = document.createElement('div');
-                av.className = 'user-avatar' + (isMe ? ' me' : '');
-                av.title = isMe ? 'You' : 'Click to send DM';
-                av.innerHTML = `
-                    <div class="av-circle">
-                        ${u.name.charAt(0).toUpperCase()}
-                        <div class="online-dot"></div>
-                    </div>
-                    <div class="av-name">${isMe ? 'You' : u.name}</div>
-                `;
-                if (!isMe) av.onclick = () => sendDmRequest(u.name);
-                bar.appendChild(av);
-            });
-            if (!count) bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>';
-        });
-
-        // ===== ROOM SWITCH =====
+        // ===== SWITCH ROOM (removed "FAMILY CHAT" text) =====
         function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
             if (chatListener) chatRef.off('value', chatListener);
+            if (currentTypingListener) currentTypingListener();
             currentRoom = roomId;
             const hl = document.getElementById('headerLeft');
-
             if (isDm) {
                 chatRef = db.ref('dm_chats/' + roomId + '/messages');
                 hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`;
@@ -308,19 +392,62 @@
                 hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`;
             } else {
                 chatRef = db.ref('chats');
-                hl.innerHTML = `<span>💬 Public Chat</span>`;
+                hl.innerHTML = `<span>💬</span>`;  // removed "FAMILY CHAT"
             }
+            resetSelectModeUI(false);
             loadMessages();
+            setupTypingForRoom(roomId);
+        }
+        function leaveRoom() { switchRoom('public','',false,false,null); }
+
+        // ===== TYPING INDICATOR =====
+        function setupTypingForRoom(roomId) {
+            if (currentTypingListener) currentTypingListener();
+            const typingPath = `typing_status/${roomId}`;
+            const typingQuery = db.ref(typingPath);
+            const listener = typingQuery.on('value', snap => {
+                const typingDiv = document.getElementById('typingIndicator');
+                if (!snap.exists()) { typingDiv.style.display = 'none'; return; }
+                const typingUsers = [];
+                snap.forEach(child => {
+                    const val = child.val();
+                    if (val === true && child.key !== safeUser) typingUsers.push(child.key);
+                    else if (val && val.name && val.name !== currentUser && val.active) typingUsers.push(val.name);
+                    else if (val === true && child.key !== safeUser) typingUsers.push(child.key);
+                });
+                if (typingUsers.length === 0) typingDiv.style.display = 'none';
+                else {
+                    let text = typingUsers.slice(0,3).join(', ') + (typingUsers.length>3 ? '...' : '');
+                    document.getElementById('typingUsersText').innerText = text;
+                    typingDiv.style.display = 'block';
+                }
+            });
+            currentTypingListener = () => typingQuery.off('value', listener);
+            const inputElem = document.getElementById('inp');
+            const updateTyping = (isTyping) => {
+                if (!roomId) return;
+                const statusRef = db.ref(`typing_status/${roomId}/${safeUser}`);
+                if (isTyping) {
+                    statusRef.set({ name: currentUser, active: true, timestamp: Date.now() });
+                    statusRef.onDisconnect().remove();
+                } else {
+                    statusRef.remove();
+                }
+            };
+            const handleInput = () => {
+                updateTyping(true);
+                if (typingTimeout) clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => updateTyping(false), 1200);
+            };
+            inputElem.removeEventListener('input', handleInput);
+            inputElem.addEventListener('input', handleInput);
         }
 
-        function leaveRoom() { switchRoom('public','Public Chat',false,false,null); }
-
-        // ===== LOAD MESSAGES =====
+        // ===== LOAD MESSAGES (same as before, with repost) =====
         function loadMessages() {
             const box = document.getElementById('messages');
             box.innerHTML = '';
             let lastDate = '';
-
             chatListener = chatRef.orderByChild('timestamp').on('value', snap => {
                 box.innerHTML = ''; lastDate = '';
                 snap.forEach(child => {
@@ -328,7 +455,6 @@
                     const dName = d.name || 'Guest';
                     const isDeleted = d.isDeletedEveryone || false;
                     if (d.deletedBy && d.deletedBy[safeUser]) return;
-
                     if (d.date && d.date !== lastDate) {
                         const dd = document.createElement('div');
                         dd.className = 'date-divider';
@@ -336,19 +462,24 @@
                         box.appendChild(dd);
                         lastDate = d.date;
                     }
-
                     const isSent = dName === currentUser;
                     const div = document.createElement('div');
                     div.className = 'msg ' + (isSent ? 'sent' : 'received');
-
+                    if (selectModeActive) div.classList.add('select-mode');
                     const content = isDeleted ? `<span class="deleted-msg">🚫 This message was deleted</span>` : (d.text || '');
                     const info = isSent
                         ? `<span>📅 ${d.date}</span><span style="opacity:.4">·</span><span>${d.time}</span>`
                         : `<span class="info-name">${dName}</span><span style="opacity:.4">·</span><span>📅 ${d.date}</span><span style="opacity:.4">·</span><span>${d.time}</span>`;
-
+                    let checkboxHtml = '';
+                    if (selectModeActive) {
+                        const checkedAttr = selectedMsgKeys.has(key) ? 'checked' : '';
+                        checkboxHtml = `<input type="checkbox" class="msg-select-checkbox" data-key="${key}" ${checkedAttr} onclick="event.stopPropagation(); toggleMessageSelection('${key}', this.checked)">`;
+                    }
                     div.innerHTML = `
                         <div style="position:relative">
+                            ${checkboxHtml}
                             <div id="menu-${key}" class="del-menu">
+                                <button onclick="repostMessage('${(d.text||'').replace(/'/g, "\\'")}', '${dName.replace(/'/g, "\\'")}')">↩️ Repost</button>
                                 <button onclick="deleteForMe('${key}')">Delete for me</button>
                                 ${isSent && !isDeleted ? `<button style="color:#f87171" onclick="deleteForEveryone('${key}')">Delete for everyone</button>` : ''}
                             </div>
@@ -364,7 +495,60 @@
                 box.scrollTop = box.scrollHeight;
             });
         }
-
+        
+        function repostMessage(originalText, originalUser) {
+            const inputField = document.getElementById('inp');
+            const quoted = `📎 Repost from ${originalUser}: "${originalText}"`;
+            inputField.value = quoted;
+            inputField.focus();
+            closeEmojiPanel();
+        }
+        
+        // Multi-select functions
+        function toggleMultiSelectMode(forceOff = false) {
+            if (forceOff === false && selectModeActive) { resetSelectModeUI(false); return; }
+            if (forceOff === true) { resetSelectModeUI(false); return; }
+            selectModeActive = true;
+            selectedMsgKeys.clear();
+            document.getElementById('selectionToolbar').style.display = 'flex';
+            document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel';
+            loadMessages();
+        }
+        function resetSelectModeUI(keepMessages = false) {
+            selectModeActive = false;
+            selectedMsgKeys.clear();
+            document.getElementById('selectionToolbar').style.display = 'none';
+            document.getElementById('multiSelectBtn').innerHTML = '📌 Select';
+            loadMessages();
+        }
+        function toggleMessageSelection(key, isChecked) {
+            if (isChecked) selectedMsgKeys.add(key);
+            else selectedMsgKeys.delete(key);
+            document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`;
+        }
+        async function deleteSelectedForMe() {
+            if (selectedMsgKeys.size === 0) return;
+            for (let key of selectedMsgKeys) {
+                await chatRef.child(key + '/deletedBy/' + safeUser).set(true);
+            }
+            resetSelectModeUI(false);
+            showToast(`🗑️ ${selectedMsgKeys.size} messages deleted for you`, 'green');
+        }
+        async function deleteSelectedForEveryone() {
+            if (selectedMsgKeys.size === 0) return;
+            const promises = [];
+            for (let key of selectedMsgKeys) {
+                const snap = await chatRef.child(key).once('value');
+                const msg = snap.val();
+                if (msg && msg.name === currentUser) {
+                    promises.push(chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }));
+                }
+            }
+            await Promise.all(promises);
+            resetSelectModeUI(false);
+            showToast(`⚠️ Deleted for everyone (your messages only)`, 'green');
+        }
+        
         // ===== SEND =====
         function send() {
             const inp = document.getElementById('inp');
@@ -378,8 +562,10 @@
                 timestamp: Date.now(), isDeletedEveryone: false
             });
             inp.value = '';
+            if (typingTimeout) clearTimeout(typingTimeout);
+            if (currentRoom) db.ref(`typing_status/${currentRoom}/${safeUser}`).remove();
+            closeEmojiPanel();
         }
-
         function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); }
         function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
         function toggleMenu(key) {
@@ -388,223 +574,69 @@
             document.querySelectorAll('.del-menu').forEach(x => x.style.display = 'none');
             m.style.display = v ? 'none' : 'block';
         }
-
-        // ===================================================
-        // ========== DM REQUEST SYSTEM ======================
-        // ===================================================
-
-        function getDmRoomId(a, b) {
-            const sa = a.replace(/[.#$[\] /]/g,'_');
-            const sb = b.replace(/[.#$[\] /]/g,'_');
-            return [sa,sb].sort().join('__dm__');
+        
+        // ===== EMOJI PICKER =====
+        const commonEmojis = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","💀","👻","👽","🤖","💩","😺","😸","😹","😻","😼","😽","🙀","😿","😾","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","👍","👎","👌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","✋","👏","🙌","👐","🤲","🤝","🙏","💪","🦾","🦿","🦵","🦶","👂","👃","🧠","🦷","🦴","👀","👅","👄","💋","💍","👑","💄","🎉","🎊","🎈","✨","🌟","⭐","💫","🔥","💥","💯","❌","✅","➕","➖","➗","💢","💬","💭","🗯️","♨️","🌀","🔰","🔱","🎵","🎶","📢","🔔","🔕","💡","🔦","🏮","📌","📍","📎","✂️","🔒","🔓","🔏","🔐","🔑","🔨","🧨","🎁","🎀","🏆","🥇","🥈","🥉","⚽","⚾","🥎","🏀","🏐","🏈","🏉","🎾","🥏","🎳","🏏","🏑","🏒","🥍","🏓","🏸","🥊","🥋","🥅","⛳","⛸","🎣","🤿","🎽","🎿","🛷","🥌","🎯","🎱","🔮","🎮","🎰","🎲","🧩","♟️","🎭","🎨","🧵","🧶","🎼","🎤","🎧","🥁","📻","📺","📹","🎥","📸","📷","📱","☎️","📞","🖥️","💻","🖨️","⌨️","🖱️","🖲️","💽","💾","💿","📀","🧮","📺","📻","📡","⏰","⏲️","⏱️","🕰️","⌛","⏳","🌡️","☀️","🌟","⭐","🌙","☁️","⛈️","🌩️","🌨️","❄️","🌈","☂️","☔","💧","🌊"];
+        
+        function toggleEmojiPanel() {
+            const panel = document.getElementById('emojiPanel');
+            if (panel.classList.contains('show')) {
+                panel.classList.remove('show');
+            } else {
+                if (panel.children.length === 0) {
+                    commonEmojis.forEach(emoji => {
+                        const span = document.createElement('span');
+                        span.className = 'emoji-item';
+                        span.textContent = emoji;
+                        span.onclick = () => {
+                            const input = document.getElementById('inp');
+                            input.value += emoji;
+                            input.focus();
+                            panel.classList.remove('show');
+                        };
+                        panel.appendChild(span);
+                    });
+                }
+                panel.classList.add('show');
+            }
         }
-
-        // SEND request to another user
-        function sendDmRequest(targetUser) {
-            if (targetUser === currentUser) { showToast('آپ خود سے DM نہیں کر سکتے 😄', 'red'); return; }
-
-            pendingDmTarget = targetUser;
-            document.getElementById('dmSendText').innerHTML = `<strong style="color:white">${targetUser}</strong> کو request بھیجی جا رہی ہے...`;
+        function closeEmojiPanel() {
+            document.getElementById('emojiPanel').classList.remove('show');
+        }
+        
+        // ===== DM & ROOMS (unchanged but ensure functions exist) =====
+        function getDmRoomId(a,b) { const sa=a.replace(/[.#$[\] /]/g,'_'), sb=b.replace(/[.#$[\] /]/g,'_'); return [sa,sb].sort().join('__dm__'); }
+        function sendDmRequest(targetUser) { if (targetUser===currentUser) { showToast('آپ خود سے DM نہیں کر سکتے', 'red'); return; }
+            pendingDmTarget=targetUser; document.getElementById('dmSendText').innerHTML=`<strong style="color:white">${targetUser}</strong> کو request بھیجی جا رہی ہے...`;
             document.getElementById('dmSendModal').classList.add('active');
-
-            const targetSafe = targetUser.replace(/[.#$[\] /]/g,'_');
-            pendingDmRef = db.ref('dm_requests/' + targetSafe).push({
-                from: currentUser,
-                fromSafe: safeUser,
-                status: 'pending',
-                t: Date.now()
-            });
-            pendingDmKey = pendingDmRef.key;
-
-            document.getElementById('dmSendText').innerHTML = `⏳ <strong style="color:white">${targetUser}</strong> کے جواب کا انتظار ہے...`;
-
-            // Listen for accept/decline
-            pendingDmRef.on('value', snap => {
-                if (!snap.exists()) return;
-                const data = snap.val();
-                if (data.status === 'accepted') {
-                    pendingDmRef.off();
-                    setTimeout(() => pendingDmRef.remove(), 1000);
-                    document.getElementById('dmSendModal').classList.remove('active');
-                    pendingDmKey = null; pendingDmRef = null;
-                    const roomId = getDmRoomId(currentUser, targetUser);
-                    switchRoom(roomId, targetUser, false, true, targetUser);
-                    showToast('✅ ' + targetUser + ' نے Accept کر لیا!', 'green');
-                } else if (data.status === 'declined') {
-                    pendingDmRef.off();
-                    pendingDmRef.remove();
-                    document.getElementById('dmSendModal').classList.remove('active');
-                    pendingDmKey = null; pendingDmRef = null;
-                    showToast('❌ ' + targetUser + ' نے Decline کر دیا', 'red');
-                }
-            });
-        }
-
-        function cancelDmRequest() {
-            if (pendingDmRef) { pendingDmRef.off(); pendingDmRef.remove(); }
-            pendingDmKey = null; pendingDmTarget = null; pendingDmRef = null;
-            document.getElementById('dmSendModal').classList.remove('active');
-        }
-
-        // LISTEN for incoming requests
-        db.ref('dm_requests/' + safeUser).on('child_added', snap => {
-            const data = snap.val();
-            if (!data || data.status !== 'pending') return;
-            showDmNotification(data.from, snap.key);
-        });
-
-        function showDmNotification(fromUser, reqKey) {
-            const popup = document.getElementById('dmRequestPopup');
-            const notif = document.createElement('div');
-            notif.className = 'dm-notif';
-            notif.id = 'notif-' + reqKey;
-            notif.innerHTML = `
-                <div class="notif-top">
-                    <div class="notif-av">${fromUser.charAt(0).toUpperCase()}</div>
-                    <div class="notif-text">
-                        <div class="nt">💬 Private Chat Request</div>
-                        <div class="nb">${fromUser} آپ سے بات کرنا چاہتا ہے</div>
-                    </div>
-                </div>
-                <div class="notif-btns">
-                    <button class="decline-btn" onclick="respondDm('${reqKey}','${fromUser}','declined')">✕ Decline</button>
-                    <button class="accept-btn" onclick="respondDm('${reqKey}','${fromUser}','accepted')">✓ Accept</button>
-                </div>
-            `;
-            popup.appendChild(notif);
-
-            // Auto-dismiss after 30s
-            setTimeout(() => { if (notif.parentNode) notif.remove(); }, 30000);
-        }
-
-        function respondDm(reqKey, fromUser, response) {
-            const notif = document.getElementById('notif-' + reqKey);
-            if (notif) notif.remove();
-
-            db.ref('dm_requests/' + safeUser + '/' + reqKey).update({ status: response }).then(() => {
-                if (response === 'accepted') {
-                    setTimeout(() => db.ref('dm_requests/' + safeUser + '/' + reqKey).remove(), 2000);
-                    const roomId = getDmRoomId(currentUser, fromUser);
-                    switchRoom(roomId, fromUser, false, true, fromUser);
-                    showToast('✅ ' + fromUser + ' سے chat شروع ہو گئی!', 'green');
-                } else {
-                    db.ref('dm_requests/' + safeUser + '/' + reqKey).remove();
-                    showToast('Request decline کر دی گئی', 'red');
-                }
-            });
-        }
-
-        // ===================================================
-        // ========== PRIVATE ROOMS ==========================
-        // ===================================================
-        function openRoomModal() { document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
-        function closeRoomModal() { document.getElementById('roomModal').classList.remove('active'); clearErrors(); }
-        function clearErrors() { ['joinError','createError','deleteError'].forEach(id => { const e=document.getElementById(id); if(e) e.textContent=''; }); }
-
-        function switchTab(tab) {
-            const tabs=['join','create','delete'];
-            document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i]===tab));
-            tabs.forEach(t => { const e=document.getElementById('tab-'+t); if(e) e.classList.toggle('active', t===tab); });
-            clearErrors();
-            if (tab==='delete') loadDeleteRoomList();
-        }
-
-        function loadRoomList() {
-            const c = document.getElementById('roomListContainer');
-            c.innerHTML = '<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">لوڈ ہو رہا ہے...</p>';
-            db.ref('private_rooms').once('value', snap => {
-                c.innerHTML = '';
-                if (!snap.exists()) { c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">کوئی room نہیں</p>'; return; }
-                snap.forEach(child => {
-                    const d=child.val(); const rid=child.key;
-                    const item=document.createElement('div'); item.className='room-item';
-                    item.innerHTML=`<span class="rname">🔒 ${d.name||rid}</span><span class="rbadge">Private</span>`;
-                    item.onclick=()=>{ document.getElementById('joinRoomId').value=rid; document.getElementById('joinPassword').focus(); };
-                    c.appendChild(item);
-                });
-            });
-        }
-
-        function loadDeleteRoomList() {
-            const c = document.getElementById('deleteRoomListContainer');
-            c.innerHTML = '<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">لوڈ ہو رہا ہے...</p>';
-            db.ref('private_rooms').once('value', snap => {
-                c.innerHTML = '';
-                if (!snap.exists()) { c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">کوئی room نہیں</p>'; return; }
-                snap.forEach(child => {
-                    const d=child.val(); const rid=child.key;
-                    const item=document.createElement('div'); item.className='room-item'; item.style.borderColor='rgba(248,113,113,0.2)';
-                    item.innerHTML=`<span class="rname">🔒 ${d.name||rid}</span><span class="rbadge" style="color:#f87171;border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.1);">ID: ${rid}</span>`;
-                    item.onclick=()=>{ document.getElementById('deleteRoomId').value=rid; document.getElementById('deleteRoomPass').focus(); };
-                    c.appendChild(item);
-                });
-            });
-        }
-
-        function createRoom() {
-            const rid=document.getElementById('newRoomId').value.trim().replace(/[^a-zA-Z0-9_-]/g,'');
-            const rn=document.getElementById('newRoomName').value.trim();
-            const pass=document.getElementById('newRoomPass').value.trim();
-            if (!rid) { document.getElementById('createError').textContent='❌ Room ID درج کریں'; return; }
-            if (!rn) { document.getElementById('createError').textContent='❌ Room Name درج کریں'; return; }
-            if (!pass) { document.getElementById('createError').textContent='❌ Password درج کریں'; return; }
-            db.ref('private_rooms/'+rid).once('value', snap => {
-                if (snap.exists()) { document.getElementById('createError').textContent='❌ یہ Room ID موجود ہے'; return; }
-                db.ref('private_rooms/'+rid).set({ name:rn, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser, createdAt:Date.now() })
-                  .then(()=>{ closeRoomModal(); switchRoom(rid,rn,true,false,null); });
-            });
-        }
-
-        function joinRoom() {
-            const rid=document.getElementById('joinRoomId').value.trim();
-            const pass=document.getElementById('joinPassword').value.trim();
-            if (!rid) { document.getElementById('joinError').textContent='❌ Room ID درج کریں'; return; }
-            if (!pass) { document.getElementById('joinError').textContent='❌ Password درج کریں'; return; }
-            db.ref('private_rooms/'+rid).once('value', snap => {
-                if (!snap.exists()) { document.getElementById('joinError').textContent='❌ Room موجود نہیں'; return; }
-                const d=snap.val();
-                if (d.passwordHash!==btoa(pass+'_fcpro')) { document.getElementById('joinError').textContent='❌ غلط Password'; return; }
-                closeRoomModal(); switchRoom(rid,d.name,true,false,null);
-            });
-        }
-
-        function deleteRoom() {
-            const rid=document.getElementById('deleteRoomId').value.trim();
-            const pass=document.getElementById('deleteRoomPass').value.trim();
-            if (!rid) { document.getElementById('deleteError').textContent='❌ Room ID درج کریں'; return; }
-            if (!pass) { document.getElementById('deleteError').textContent='❌ Password درج کریں'; return; }
-            db.ref('private_rooms/'+rid).once('value', snap => {
-                if (!snap.exists()) { document.getElementById('deleteError').textContent='❌ Room موجود نہیں'; return; }
-                const d=snap.val();
-                if (d.passwordHash!==btoa(pass+'_fcpro')) { document.getElementById('deleteError').textContent='❌ غلط Password'; return; }
-                db.ref('private_rooms/'+rid).remove().then(()=>{
-                    closeRoomModal();
-                    if (currentRoom===rid) switchRoom('public','Public Chat',false,false,null);
-                    showToast('🗑️ Room delete ہو گیا','red');
-                });
-            });
-        }
-
-        // ===== TOAST =====
-        function showToast(msg, type) {
-            const t = document.createElement('div');
-            t.textContent = msg;
-            const col = type==='green' ? '#22c55e' : '#f87171';
-            t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-                background:#1e293b;border:1px solid ${col};color:${col};
-                padding:10px 20px;border-radius:14px;font-size:0.83rem;z-index:9999;
-                animation:fadeIn 0.3s ease-out;box-shadow:0 8px 25px rgba(0,0,0,0.4);white-space:nowrap;`;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3500);
-        }
-
+            const targetSafe=targetUser.replace(/[.#$[\] /]/g,'_');
+            pendingDmRef=db.ref('dm_requests/'+targetSafe).push({ from:currentUser, fromSafe:safeUser, status:'pending', t:Date.now() });
+            pendingDmKey=pendingDmRef.key;
+            document.getElementById('dmSendText').innerHTML=`⏳ <strong style="color:white">${targetUser}</strong> کے جواب کا انتظار ہے...`;
+            pendingDmRef.on('value', snap=>{ if(!snap.exists())return; const data=snap.val(); if(data.status==='accepted'){ pendingDmRef.off(); setTimeout(()=>pendingDmRef.remove(),1000); document.getElementById('dmSendModal').classList.remove('active'); pendingDmKey=null; pendingDmRef=null; const roomId=getDmRoomId(currentUser,targetUser); switchRoom(roomId,targetUser,false,true,targetUser); showToast('✅ '+targetUser+' نے Accept کر لیا!','green'); } else if(data.status==='declined'){ pendingDmRef.off(); pendingDmRef.remove(); document.getElementById('dmSendModal').classList.remove('active'); pendingDmKey=null; pendingDmRef=null; showToast('❌ '+targetUser+' نے Decline کر دیا','red'); } }); }
+        function cancelDmRequest() { if(pendingDmRef){ pendingDmRef.off(); pendingDmRef.remove(); } pendingDmKey=null; pendingDmTarget=null; pendingDmRef=null; document.getElementById('dmSendModal').classList.remove('active'); }
+        db.ref('dm_requests/'+safeUser).on('child_added', snap=>{ const data=snap.val(); if(data&&data.status==='pending') showDmNotification(data.from, snap.key); });
+        function showDmNotification(fromUser,reqKey){ const popup=document.getElementById('dmRequestPopup'); const notif=document.createElement('div'); notif.className='dm-notif'; notif.id='notif-'+reqKey; notif.innerHTML=`<div class="notif-top"><div class="notif-av">${fromUser.charAt(0).toUpperCase()}</div><div class="notif-text"><div class="nt">💬 Private Chat Request</div><div class="nb">${fromUser} آپ سے بات کرنا چاہتا ہے</div></div></div><div class="notif-btns"><button class="decline-btn" onclick="respondDm('${reqKey}','${fromUser}','declined')">✕ Decline</button><button class="accept-btn" onclick="respondDm('${reqKey}','${fromUser}','accepted')">✓ Accept</button></div>`; popup.appendChild(notif); setTimeout(()=>{ if(notif.parentNode) notif.remove(); },30000); }
+        function respondDm(reqKey,fromUser,response){ const notif=document.getElementById('notif-'+reqKey); if(notif)notif.remove(); db.ref('dm_requests/'+safeUser+'/'+reqKey).update({status:response}).then(()=>{ if(response==='accepted'){ setTimeout(()=>db.ref('dm_requests/'+safeUser+'/'+reqKey).remove(),2000); const roomId=getDmRoomId(currentUser,fromUser); switchRoom(roomId,fromUser,false,true,fromUser); showToast('✅ '+fromUser+' سے chat شروع ہو گئی!','green'); } else { db.ref('dm_requests/'+safeUser+'/'+reqKey).remove(); showToast('Request decline کر دی گئی','red'); } }); }
+        function openRoomModal(){ document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
+        function closeRoomModal(){ document.getElementById('roomModal').classList.remove('active'); clearErrors(); closeEmojiPanel(); }
+        function clearErrors(){ ['joinError','createError','deleteError'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=''; }); }
+        function switchTab(tab){ const tabs=['join','create','delete']; document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active', tabs[i]===tab)); tabs.forEach(t=>{ const e=document.getElementById('tab-'+t); if(e) e.classList.toggle('active', t===tab); }); clearErrors(); if(tab==='delete') loadDeleteRoomList(); }
+        function loadRoomList(){ const c=document.getElementById('roomListContainer'); c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">لوڈ ہو رہا ہے...</p>'; db.ref('private_rooms').once('value', snap=>{ c.innerHTML=''; if(!snap.exists()){ c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">کوئی room نہیں</p>'; return; } snap.forEach(child=>{ const d=child.val(); const rid=child.key; const item=document.createElement('div'); item.className='room-item'; item.innerHTML=`<span class="rname">🔒 ${d.name||rid}</span><span class="rbadge">Private</span>`; item.onclick=()=>{ document.getElementById('joinRoomId').value=rid; document.getElementById('joinPassword').focus(); }; c.appendChild(item); }); }); }
+        function loadDeleteRoomList(){ const c=document.getElementById('deleteRoomListContainer'); c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">لوڈ ہو رہا ہے...</p>'; db.ref('private_rooms').once('value', snap=>{ c.innerHTML=''; if(!snap.exists()){ c.innerHTML='<p style="font-size:0.72rem;color:var(--text-dim);text-align:center;">کوئی room نہیں</p>'; return; } snap.forEach(child=>{ const d=child.val(); const rid=child.key; const item=document.createElement('div'); item.className='room-item'; item.style.borderColor='rgba(248,113,113,0.2)'; item.innerHTML=`<span class="rname">🔒 ${d.name||rid}</span><span class="rbadge" style="color:#f87171;border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.1);">ID: ${rid}</span>`; item.onclick=()=>{ document.getElementById('deleteRoomId').value=rid; document.getElementById('deleteRoomPass').focus(); }; c.appendChild(item); }); }); }
+        function createRoom(){ const rid=document.getElementById('newRoomId').value.trim().replace(/[^a-zA-Z0-9_-]/g,''); const rn=document.getElementById('newRoomName').value.trim(); const pass=document.getElementById('newRoomPass').value.trim(); if(!rid||!rn||!pass){ document.getElementById('createError').textContent='❌ تمام فیلڈز درج کریں'; return; } db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists()){ document.getElementById('createError').textContent='❌ یہ Room ID موجود ہے'; return; } db.ref('private_rooms/'+rid).set({ name:rn, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser, createdAt:Date.now() }).then(()=>{ closeRoomModal(); switchRoom(rid,rn,true,false,null); }); }); }
+        function joinRoom(){ const rid=document.getElementById('joinRoomId').value.trim(); const pass=document.getElementById('joinPassword').value.trim(); if(!rid||!pass){ document.getElementById('joinError').textContent='❌ Room ID اور Password درج کریں'; return; } db.ref('private_rooms/'+rid).once('value', snap=>{ if(!snap.exists()){ document.getElementById('joinError').textContent='❌ Room موجود نہیں'; return; } const d=snap.val(); if(d.passwordHash!==btoa(pass+'_fcpro')){ document.getElementById('joinError').textContent='❌ غلط Password'; return; } closeRoomModal(); switchRoom(rid,d.name,true,false,null); }); }
+        function deleteRoom(){ const rid=document.getElementById('deleteRoomId').value.trim(); const pass=document.getElementById('deleteRoomPass').value.trim(); if(!rid||!pass){ document.getElementById('deleteError').textContent='❌ Room ID اور Password درج کریں'; return; } db.ref('private_rooms/'+rid).once('value', snap=>{ if(!snap.exists()){ document.getElementById('deleteError').textContent='❌ Room موجود نہیں'; return; } const d=snap.val(); if(d.passwordHash!==btoa(pass+'_fcpro')){ document.getElementById('deleteError').textContent='❌ غلط Password'; return; } db.ref('private_rooms/'+rid).remove().then(()=>{ closeRoomModal(); if(currentRoom===rid) switchRoom('public','',false,false,null); showToast('🗑️ Room delete ہو گیا','red'); }); }); }
+        function showToast(msg,type){ const t=document.createElement('div'); t.textContent=msg; const col=type==='green'?'#22c55e':'#f87171'; t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid ${col};color:${col};padding:10px 20px;border-radius:14px;font-size:0.83rem;z-index:9999;animation:fadeIn 0.3s ease-out;box-shadow:0 8px 25px rgba(0,0,0,0.4);white-space:nowrap;`; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
+        
         // ===== INIT =====
         loadMessages();
-        document.getElementById('inp').addEventListener('keypress', e => { if(e.key==='Enter') send(); });
-        window.onclick = e => {
-            if (!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none');
-            if (e.target===document.getElementById('roomModal')) closeRoomModal();
-        };
+        document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
+        window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
+        setupTypingForRoom('public');
+        
+        // online users listener
+        db.ref('presence').on('value', snap=>{ const bar=document.getElementById('onlineBar'); bar.innerHTML='<span class="online-bar-label">🟢 Online:</span>'; if(!snap.exists()){ bar.innerHTML+='<span class="no-online">کوئی online نہیں</span>'; return; } let count=0; snap.forEach(child=>{ const u=child.val(); if(!u||!u.name) return; count++; const isMe=u.name===currentUser; const av=document.createElement('div'); av.className='user-avatar'+(isMe?' me':''); av.title=isMe?'You':'Click to send DM'; av.innerHTML=`<div class="av-circle">${u.name.charAt(0).toUpperCase()}<div class="online-dot"></div></div><div class="av-name">${isMe?'You':u.name}</div>`; if(!isMe) av.onclick=()=>sendDmRequest(u.name); bar.appendChild(av); }); if(!count) bar.innerHTML+='<span class="no-online">کوئی online نہیں</span>'; });
     </script>
 </body>
 </html>
