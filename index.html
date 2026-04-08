@@ -43,12 +43,17 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html { height: 100%; height: 100dvh; overflow: hidden; }
+        html {
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+        }
 
         body {
             font-family: 'Sora', sans-serif;
             background: var(--bg);
-            height: 100%; height: 100dvh;
+            height: 100%;
+            height: 100dvh;
             overflow: hidden;
             position: fixed;
             width: 100%;
@@ -60,6 +65,7 @@
             padding-top: env(safe-area-inset-top);
         }
 
+        /* ===== MESSAGES AREA (TOP) ===== */
         #messages {
             flex: 1;
             overflow-y: auto;
@@ -67,77 +73,383 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) transparent;
         }
 
-        .msg { display: flex; align-items: flex-end; gap: 8px; max-width: 82%; position: relative; animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+        /* ===== MESSAGE BUBBLES ===== */
+        .msg {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            max-width: 82%;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
         .sent { align-self: flex-end; flex-direction: row-reverse; }
         .received { align-self: flex-start; }
 
-        .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: white; flex-shrink: 0; box-shadow: 0 0 0 2px var(--glass-border); }
-        .bubble { padding: 10px 14px; border-radius: 18px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); cursor: pointer; transition: transform 0.15s; }
-        .sent .bubble { background: var(--sent-bg); border-radius: 18px 18px 4px 18px; color: white; }
-        .received .bubble { background: var(--recv-bg); border-radius: 18px 18px 18px 4px; color: var(--text); }
-        .msg-body { display: flex; flex-direction: column; gap: 3px; }
-        .name { font-size: 10px; font-weight: 700; opacity: 0.85; }
-        .msg-text { font-size: 14px; line-height: 1.5; word-break: break-word; }
-        .meta { font-size: 9px; opacity: 0.55; text-align: right; margin-top: 2px; }
+        .avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 13px; color: white;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px var(--glass-border);
+        }
 
-        .del-menu { display: none; position: absolute; bottom: 110%; background: rgba(20,15,50,0.97); border: 1px solid var(--glass-border); border-radius: 14px; z-index: 300; overflow: hidden; min-width: 170px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); backdrop-filter: blur(20px); }
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .bubble:hover { transform: scale(1.02); }
+
+        .sent .bubble {
+            background: var(--sent-bg);
+            border-radius: 18px 18px 4px 18px;
+            color: white;
+        }
+
+        .received .bubble {
+            background: var(--recv-bg);
+            border-radius: 18px 18px 18px 4px;
+            color: var(--text);
+        }
+
+        .msg-body { display: flex; flex-direction: column; gap: 3px; }
+
+        .name {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+        }
+
+        .msg-text {
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .meta {
+            font-size: 9px;
+            opacity: 0.55;
+            text-align: right;
+            margin-top: 2px;
+        }
+
+        /* ===== DELETE MENU ===== */
+        .del-menu {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            background: rgba(20,15,50,0.97);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            z-index: 300;
+            overflow: hidden;
+            min-width: 170px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+        }
+
         .sent .del-menu { right: 0; }
         .received .del-menu { left: 0; }
-        .del-menu button { display: block; width: 100%; padding: 12px 16px; border: none; background: none; color: #f1f5f9; text-align: left; cursor: pointer; font-size: 13px; font-family: 'Sora', sans-serif; transition: background 0.2s; }
+
+        /* ===== EMOJI PICKER ===== */
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            background: rgba(15,10,40,0.98);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            z-index: 400;
+            padding: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            backdrop-filter: blur(24px);
+            flex-direction: column;
+            gap: 4px;
+            animation: popUp 0.22s cubic-bezier(0.34,1.56,0.64,1);
+            width: 230px;
+        }
+
+        @keyframes popUp {
+            from { opacity: 0; transform: scale(0.6) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .sent .emoji-picker { right: 0; }
+        .received .emoji-picker { left: 0; }
+
+        .emoji-picker.show { display: flex; }
+
+        .ep-category {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--accent);
+            text-transform: uppercase;
+            padding: 4px 4px 2px;
+            opacity: 0.7;
+        }
+
+        .ep-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+        }
+
+        .ep-btn {
+            font-size: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 10px;
+            transition: transform 0.15s, background 0.15s;
+            line-height: 1;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ep-btn:hover { transform: scale(1.4); background: rgba(255,255,255,0.1); }
+        .ep-btn:active { transform: scale(1.1); }
+
+        /* ===== REACTION BADGES ===== */
+        .reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sent .reactions { justify-content: flex-end; }
+        .received .reactions { justify-content: flex-start; }
+
+        .react-badge {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: transform 0.15s, background 0.15s;
+            backdrop-filter: blur(6px);
+            animation: popBadge 0.25s ease;
+        }
+
+        @keyframes popBadge {
+            0%   { transform: scale(0); opacity: 0; }
+            70%  { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .react-badge:hover { background: rgba(167,139,250,0.2); transform: scale(1.1); }
+        .react-badge.mine { border-color: var(--accent); background: rgba(167,139,250,0.2); }
+
+        .react-count { font-size: 10px; font-weight: 600; opacity: 0.85; }
+
+        .del-menu button {
+            display: block; width: 100%; padding: 12px 16px;
+            border: none; background: none; color: #f1f5f9;
+            text-align: left; cursor: pointer; font-size: 13px;
+            font-family: 'Sora', sans-serif;
+            transition: background 0.2s;
+        }
         .del-menu button:hover { background: rgba(167,139,250,0.15); }
         .del-menu button + button { border-top: 1px solid var(--glass-border); }
 
-        .emoji-picker { display: none; position: absolute; bottom: 110%; background: rgba(20,15,50,0.97); border: 1px solid var(--glass-border); border-radius: 40px; z-index: 400; padding: 8px 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); backdrop-filter: blur(20px); gap: 6px; flex-direction: row; align-items: center; }
-        .emoji-picker.show { display: flex; }
-        .ep-btn { font-size: 22px; background: none; border: none; cursor: pointer; padding: 4px; border-radius: 50%; line-height: 1; }
+        /* ===== FOOTER / INPUT (MIDDLE) ===== */
+        .footer {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            gap: 10px;
+            background: var(--footer-bg);
+            border-top: 1px solid var(--glass-border);
+            flex-shrink: 0;
+        }
 
-        .reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-        .sent .reactions { justify-content: flex-end; }
-        .received .reactions { justify-content: flex-start; }
-        .react-badge { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 20px; padding: 2px 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 3px; backdrop-filter: blur(6px); }
-        .react-badge.mine { border-color: var(--accent); background: rgba(167,139,250,0.2); }
-        .react-count { font-size: 10px; font-weight: 600; opacity: 0.85; }
+        .footer input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            outline: none;
+            background: var(--input-bg);
+            color: var(--text);
+            font-family: 'Sora', sans-serif;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            transition: border 0.2s;
+        }
 
-        .footer { display: flex; align-items: center; padding: 10px 14px; gap: 10px; background: var(--footer-bg); border-top: 1px solid var(--glass-border); flex-shrink: 0; }
-        .footer input { flex: 1; padding: 12px 18px; border: 1px solid var(--glass-border); border-radius: 28px; outline: none; background: var(--input-bg); color: var(--text); font-family: 'Sora', sans-serif; font-size: 14px; backdrop-filter: blur(8px); }
-        .send-btn { width: 46px; height: 46px; border-radius: 50%; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(167,139,250,0.4); }
+        .footer input::placeholder { color: var(--subtext); }
+        .footer input:focus { border-color: var(--accent); }
 
-        .header { background: var(--header-bg); border-top: 1px solid var(--glass-border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .header-brand { display: flex; align-items: center; gap: 10px; }
-        .brand-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        .brand-name { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .btn-action { border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); padding: 7px 13px; border-radius: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px); }
-        .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; animation: pulse-dot 2s infinite; }
-        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .send-btn {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(167,139,250,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .send-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(167,139,250,0.6); }
+        .send-btn:active { transform: scale(0.95); }
+
+        /* ===== HEADER (BOTTOM) ===== */
+        .header {
+            background: var(--header-bg);
+            border-top: 1px solid var(--glass-border);
+            padding: 12px 16px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            flex-shrink: 0;
+        }
+
+        /* چھوٹی پٹی — mobile nav buttons کے اوپر */
+        .nav-safe-bar {
+            background: var(--header-bg);
+            height: max(env(safe-area-inset-bottom), 20px);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 2px;
+        }
+
+        .nav-safe-bar::after {
+            content: '';
+            width: 36px;
+            height: 4px;
+            border-radius: 4px;
+            background: var(--glass-border);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 12px rgba(167,139,250,0.4);
+        }
+
+        .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.3px;
+        }
+
+        .brand-sub {
+            font-size: 10px;
+            color: var(--subtext);
+            margin-top: 1px;
+        }
+
+        .header-actions { display: flex; gap: 8px; }
+
+        .btn-action {
+            border: 1px solid var(--glass-border);
+            background: var(--glass);
+            color: var(--text);
+            padding: 7px 13px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Sora', sans-serif;
+            display: flex; align-items: center; gap: 5px;
+            transition: all 0.2s;
+            backdrop-filter: blur(8px);
+        }
+        .btn-action:hover { background: rgba(167,139,250,0.15); border-color: var(--accent); }
+
+        .btn-danger { border-color: rgba(239,68,68,0.4); color: #f87171; }
+        .btn-danger:hover { background: rgba(239,68,68,0.1); border-color: #f87171; }
+
+        /* online dot */
+        .online-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
     </style>
 </head>
 <body id="mainBody">
 
+    <!-- MESSAGES (TOP) -->
     <div id="messages"></div>
 
+    <!-- INPUT (MIDDLE) -->
     <div class="footer">
         <input type="text" id="inp" placeholder="پیغام لکھیں...">
         <button class="send-btn" onclick="send()">➤</button>
     </div>
 
+    <!-- HEADER (BOTTOM) -->
     <div class="header">
         <div class="header-brand">
             <div class="brand-icon">💬</div>
             <div>
                 <div class="brand-name">Family Chat</div>
-                <div style="font-size:10px; color:var(--subtext); display:flex; align-items:center; gap:4px;">
+                <div class="brand-sub" style="display:flex;align-items:center;gap:4px;">
                     <span class="online-dot"></span> آن لائن
                 </div>
             </div>
         </div>
-        <div class="header-actions" style="display:flex; gap:8px;">
+        <div class="header-actions">
             <button class="btn-action" onclick="toggleTheme()">🌓 Theme</button>
-            <button class="btn-action" style="border-color: #f87171; color: #f87171;" onclick="clearScreen()">🗑️ Clear</button>
+            <button class="btn-action btn-danger" onclick="clearAll()">🗑️ Clear</button>
         </div>
     </div>
+
+    <!-- Mobile nav buttons ke upar thin bar -->
+    <div class="nav-safe-bar"></div>
 
     <script>
         const firebaseConfig = {
@@ -153,9 +465,16 @@
         let user = localStorage.getItem('user') || prompt("نام لکھیں:") || "Guest";
         localStorage.setItem('user', user);
 
-        let hiddenMsgs = JSON.parse(localStorage.getItem('hiddenMsgs') || "[]");
-        // EMOTIONAL EMOJIS ONLY
-        const EMOJIS = ['❤️','🥰','🥺','🫂','✨','😢','🔥','🤲'];
+        const EMOJI_GROUPS = [
+            { label: '❤️ محبت', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💗','💓','💞','💝','💘','❣️','💟'] },
+            { label: '😊 خوشی', emojis: ['😀','😃','😄','😁','😆','🥹','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','🤩','🥳','😎','🤗'] },
+            { label: '😢 غم', emojis: ['😢','😭','😥','😓','😩','😫','🥺','😞','😔','😟','😕','🙁','☹️','😣','😖'] },
+            { label: '😮 حیرت', emojis: ['😮','😯','😲','🤯','😱','😨','😧','😦','🫢','🫣','🤭','😬'] },
+            { label: '😡 غصہ', emojis: ['😡','🤬','😠','👿','💢','😤','🤯','😾'] },
+            { label: '👍 اشارے', emojis: ['👍','👎','👏','🙌','🤝','🤜','🤛','✊','👊','🫶','❤️‍🔥','🔥','💯','✅','🎉','🥂'] },
+        ];
+
+        const ALL_EMOJIS = EMOJI_GROUPS.flatMap(g => g.emojis);
 
         function toggleTheme() {
             document.body.classList.toggle('light-theme');
@@ -163,15 +482,11 @@
         }
         if(localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
 
-        function clearScreen() {
-            if(confirm("کیا آپ اپنی سکرین صاف کرنا چاہتے ہیں؟ میسجز سب کے پاس محفوظ رہیں گے۔")) {
-                const currentMsgs = document.querySelectorAll('.msg');
-                currentMsgs.forEach(m => {
-                    const key = m.id.replace('msg-', '');
-                    if(!hiddenMsgs.includes(key)) hiddenMsgs.push(key);
-                    m.remove();
-                });
-                localStorage.setItem('hiddenMsgs', JSON.stringify(hiddenMsgs));
+        function clearAll() {
+            if(confirm("صرف آپ کی screen سے messages چھپ جائیں گے — دوسروں کے نہیں۔ جاری رکھیں؟")) {
+                // Sirf is user ki screen se hide karo, Firebase se delete nahi
+                document.getElementById('messages').innerHTML = '';
+                localStorage.setItem('clearedAt_' + user, Date.now());
             }
         }
 
@@ -190,12 +505,15 @@
             }
         }
 
+        // Close all popups
         function closeAll() {
             document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none');
             document.querySelectorAll('.emoji-picker').forEach(p => p.classList.remove('show'));
         }
 
+        // Long press detection
         let pressTimer = null;
+
         function onMsgPress(key) {
             pressTimer = setTimeout(() => {
                 closeAll();
@@ -203,76 +521,84 @@
                 if(picker) picker.classList.add('show');
             }, 450);
         }
-        function onMsgRelease() { clearTimeout(pressTimer); }
+
+        function onMsgRelease(key) {
+            if(pressTimer) clearTimeout(pressTimer);
+        }
+
         function onMsgTap(key) {
             closeAll();
             const menu = document.getElementById('menu-' + key);
             if(menu) menu.style.display = 'block';
         }
 
+        // Add / toggle emoji reaction
         function react(key, emoji) {
             closeAll();
             const ref = db.ref(`reactions/${key}/${encodeURIComponent(emoji)}/${user.replace(/[.#$[\]]/g,'_')}`);
-            ref.once('value').then(snap => snap.exists() ? ref.remove() : ref.set(true));
+            ref.once('value').then(snap => {
+                if(snap.exists()) ref.remove();
+                else ref.set(true);
+            });
         }
 
-        function deleteForMe(key) {
-            if(!hiddenMsgs.includes(key)) hiddenMsgs.push(key);
-            localStorage.setItem('hiddenMsgs', JSON.stringify(hiddenMsgs));
-            const el = document.getElementById('msg-' + key);
-            if(el) el.remove();
-            closeAll();
+        function buildEmojiPicker(key) {
+            return EMOJI_GROUPS.map(group => `
+                <div class="ep-category">${group.label}</div>
+                <div class="ep-row">
+                    ${group.emojis.map(e => `<button class="ep-btn" onclick="event.stopPropagation();react('${key}','${e}')">${e}</button>`).join('')}
+                </div>
+            `).join('');
         }
 
-        function deleteForEveryone(key) {
-            if(confirm("کیا آپ یہ میسج سب کے لیے مٹانا چاہتے ہیں؟")) {
-                db.ref(`chats/${key}`).remove();
-                db.ref(`reactions/${key}`).remove();
-            }
-            closeAll();
-        }
-
+        // Render reactions under a message
         function renderReactions(key, reactionsData) {
             const container = document.getElementById('reacts-' + key);
             if(!container) return;
             container.innerHTML = '';
             if(!reactionsData) return;
+
             Object.entries(reactionsData).forEach(([encodedEmoji, users]) => {
                 const emoji = decodeURIComponent(encodedEmoji);
                 const userList = Object.keys(users || {});
                 if(userList.length === 0) return;
                 const isMine = userList.includes(user.replace(/[.#$[\]]/g,'_'));
+
                 const badge = document.createElement('span');
                 badge.className = 'react-badge' + (isMine ? ' mine' : '');
                 badge.innerHTML = `${emoji} <span class="react-count">${userList.length}</span>`;
+                badge.title = userList.join(', ');
                 badge.onclick = (e) => { e.stopPropagation(); react(key, emoji); };
                 container.appendChild(badge);
             });
         }
 
+        // Listen for new messages
         db.ref('chats').on('child_added', (snap) => {
             let data = snap.val();
             let key = snap.key;
-            if(hiddenMsgs.includes(key)) return;
-
             let isSent = data.name === user;
+
             let div = document.createElement('div');
             div.id = 'msg-' + key;
             div.className = "msg " + (isSent ? "sent" : "received");
 
-            let epBtns = EMOJIS.map(e => `<button class="ep-btn" onclick="event.stopPropagation();react('${key}','${e}')">${e}</button>`).join('');
+            // Build emoji picker buttons
+            let epBtns = buildEmojiPicker(key);
 
             div.innerHTML = `
                 <div class="avatar" style="background:${getColor(data.name)}">${data.name.charAt(0).toUpperCase()}</div>
                 <div style="display:flex;flex-direction:column;gap:3px;position:relative;">
+                    <!-- Emoji Picker (long press) -->
                     <div id="ep-${key}" class="emoji-picker">${epBtns}</div>
+                    <!-- Delete Menu (tap) -->
                     <div id="menu-${key}" class="del-menu">
-                        <button onclick="event.stopPropagation();deleteForMe('${key}')">❌ میرے لیے ڈیلیٹ</button>
-                        ${isSent ? `<button style="color:#f87171" onclick="event.stopPropagation();deleteForEveryone('${key}')">🗑️ سب کے لیے ڈیلیٹ</button>` : ''}
+                        <button onclick="event.stopPropagation();document.getElementById('msg-${key}').remove();closeAll()">❌ میرے لیے ڈیلیٹ</button>
+                        ${isSent ? `<button onclick="event.stopPropagation();db.ref('chats/${key}').remove();db.ref('reactions/${key}').remove();closeAll()">🗑️ سب کے لیے ڈیلیٹ</button>` : ''}
                     </div>
                     <div class="bubble"
-                        onmousedown="onMsgPress('${key}')" onmouseup="onMsgRelease()"
-                        ontouchstart="onMsgPress('${key}')" ontouchend="onMsgRelease()"
+                        onmousedown="onMsgPress('${key}')" onmouseup="onMsgRelease('${key}')"
+                        ontouchstart="onMsgPress('${key}')" ontouchend="onMsgRelease('${key}')"
                         onclick="onMsgTap('${key}')">
                         <div class="msg-body">
                             <span class="name" style="color:${getColor(data.name)}">${data.name}</span>
@@ -280,16 +606,22 @@
                             <span class="meta">${data.time}</span>
                         </div>
                     </div>
+                    <!-- Reaction Badges -->
                     <div id="reacts-${key}" class="reactions"></div>
                 </div>
             `;
+
             document.getElementById('messages').appendChild(div);
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-            db.ref(`reactions/${key}`).on('value', (rSnap) => renderReactions(key, rSnap.val()));
+
+            // Listen for reactions on this message
+            db.ref(`reactions/${key}`).on('value', (rSnap) => {
+                renderReactions(key, rSnap.val());
+            });
         });
 
         db.ref('chats').on('child_removed', (snap) => {
-            const el = document.getElementById('msg-' + snap.key);
+            let el = document.getElementById('msg-' + snap.key);
             if(el) el.remove();
         });
 
