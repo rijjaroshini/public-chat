@@ -28,7 +28,7 @@
             display: flex; flex-direction: column;
             overflow: hidden;
             padding-top: env(safe-area-inset-top);
-            touch-action: pan-y pinch-zoom; /* better touch */
+            touch-action: pan-y pinch-zoom;
         }
 
         /* HEADER */
@@ -107,8 +107,34 @@
         .received .bubble { background: var(--glass-bg); border-bottom-left-radius: 4px; }
         .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .msg-info .info-name { color: #c084fc; font-weight: 600; }
-        .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #1e293b; border: 1px solid var(--glass-border); border-radius: 12px; z-index: 200; width: 158px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .del-menu button { width: 100%; padding: 11px; border: none; background: none; color: white; text-align: left; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); transition: background 0.1s; }
+        
+        /* IMPROVED DEL MENU - smaller and fully visible */
+        .del-menu {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            right: 0;
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            z-index: 200;
+            width: 130px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+        .del-menu button {
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
+            background: none;
+            color: white;
+            text-align: left;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--glass-border);
+            transition: background 0.1s;
+        }
+        .del-menu button:last-child { border-bottom: none; }
         .del-menu button:hover { background: rgba(255,255,255,0.08); }
         .deleted-msg { font-style: italic; opacity: 0.5; font-size: 0.83rem; }
         
@@ -127,7 +153,7 @@
         .msg.select-mode { margin-left: 28px; }
         .sent.select-mode { margin-right: 28px; margin-left: 0; }
         
-        /* SELECTION TOOLBAR */
+        /* SELECTION TOOLBAR with select all */
         .selection-toolbar {
             background: #1e293b;
             border-bottom: 1px solid var(--glass-border);
@@ -138,7 +164,11 @@
             justify-content: space-between;
             flex-shrink: 0;
             font-size: 0.75rem;
+            flex-wrap: wrap;
         }
+        .selection-left { display: flex; align-items: center; gap: 12px; }
+        .select-all-checkbox { display: flex; align-items: center; gap: 5px; }
+        .select-all-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
         .selection-actions { display: flex; gap: 10px; }
         .selection-actions button { background: rgba(255,255,255,0.1); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.7rem; font-weight: 600; }
         .selection-actions .del-me-btn { background: rgba(248,113,113,0.2); color: #f87171; }
@@ -236,7 +266,7 @@
 
     <!-- HEADER -->
     <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬</span></div> <!-- Family Chat text removed -->
+        <div class="room-title" id="headerLeft"><span>💬</span></div>
         <div class="header-right">
             <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
@@ -256,9 +286,14 @@
     <!-- MESSAGES -->
     <div id="messages"></div>
 
-    <!-- MULTI-SELECT TOOLBAR -->
+    <!-- MULTI-SELECT TOOLBAR with Select All -->
     <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
-        <span id="selectedCount">0 selected</span>
+        <div class="selection-left">
+            <div class="select-all-checkbox">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"> <label for="selectAllCheckbox">Select All</label>
+            </div>
+            <span id="selectedCount">0 selected</span>
+        </div>
         <div class="selection-actions">
             <button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button>
             <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete for everyone</button>
@@ -273,9 +308,7 @@
             <button class="emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
             <button class="send-btn" onclick="send()">↑</button>
         </div>
-        <div id="emojiPanel" class="emoji-panel">
-            <!-- common emojis loaded via JS -->
-        </div>
+        <div id="emojiPanel" class="emoji-panel"></div>
     </div>
     <div class="bottom-safe-bar"></div>
 
@@ -341,7 +374,7 @@
     </div>
 
     <script>
-        // ===== FIREBASE ===== (same config)
+        // ===== FIREBASE =====
         firebase.initializeApp({
             apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y",
             authDomain: "public-chat-app-e75fc.firebaseapp.com",
@@ -378,7 +411,7 @@
         let typingTimeout = null;
         let currentTypingListener = null;
 
-        // ===== SWITCH ROOM (removed "FAMILY CHAT" text) =====
+        // ===== SWITCH ROOM =====
         function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
             if (chatListener) chatRef.off('value', chatListener);
             if (currentTypingListener) currentTypingListener();
@@ -392,7 +425,7 @@
                 hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`;
             } else {
                 chatRef = db.ref('chats');
-                hl.innerHTML = `<span>💬</span>`;  // removed "FAMILY CHAT"
+                hl.innerHTML = `<span>💬</span>`;
             }
             resetSelectModeUI(false);
             loadMessages();
@@ -443,7 +476,7 @@
             inputElem.addEventListener('input', handleInput);
         }
 
-        // ===== LOAD MESSAGES (same as before, with repost) =====
+        // ===== LOAD MESSAGES =====
         function loadMessages() {
             const box = document.getElementById('messages');
             box.innerHTML = '';
@@ -493,6 +526,8 @@
                     box.appendChild(div);
                 });
                 box.scrollTop = box.scrollHeight;
+                // Update select all checkbox state after render
+                updateSelectAllCheckboxState();
             });
         }
         
@@ -504,7 +539,7 @@
             closeEmojiPanel();
         }
         
-        // Multi-select functions
+        // Multi-select functions with Select All
         function toggleMultiSelectMode(forceOff = false) {
             if (forceOff === false && selectModeActive) { resetSelectModeUI(false); return; }
             if (forceOff === true) { resetSelectModeUI(false); return; }
@@ -512,8 +547,12 @@
             selectedMsgKeys.clear();
             document.getElementById('selectionToolbar').style.display = 'flex';
             document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel';
+            // reset select all checkbox
+            const selectAllCheck = document.getElementById('selectAllCheckbox');
+            if (selectAllCheck) selectAllCheck.checked = false;
             loadMessages();
         }
+        
         function resetSelectModeUI(keepMessages = false) {
             selectModeActive = false;
             selectedMsgKeys.clear();
@@ -521,21 +560,62 @@
             document.getElementById('multiSelectBtn').innerHTML = '📌 Select';
             loadMessages();
         }
+        
         function toggleMessageSelection(key, isChecked) {
             if (isChecked) selectedMsgKeys.add(key);
             else selectedMsgKeys.delete(key);
+            updateSelectedCount();
+            updateSelectAllCheckboxState();
+        }
+        
+        function updateSelectedCount() {
             document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`;
         }
+        
+        function updateSelectAllCheckboxState() {
+            const checkboxes = document.querySelectorAll('.msg-select-checkbox');
+            const allCheckboxes = Array.from(checkboxes);
+            const checkedCount = allCheckboxes.filter(cb => cb.checked).length;
+            const selectAllCheck = document.getElementById('selectAllCheckbox');
+            if (selectAllCheck) {
+                if (allCheckboxes.length === 0) selectAllCheck.checked = false;
+                else if (checkedCount === allCheckboxes.length) selectAllCheck.checked = true;
+                else selectAllCheck.checked = false;
+                selectAllCheck.indeterminate = (checkedCount > 0 && checkedCount < allCheckboxes.length);
+            }
+        }
+        
+        function toggleSelectAll() {
+            const selectAllCheck = document.getElementById('selectAllCheckbox');
+            const isChecked = selectAllCheck.checked;
+            const allCheckboxes = document.querySelectorAll('.msg-select-checkbox');
+            allCheckboxes.forEach(cb => {
+                const key = cb.getAttribute('data-key');
+                if (key) {
+                    if (isChecked && !selectedMsgKeys.has(key)) {
+                        selectedMsgKeys.add(key);
+                        cb.checked = true;
+                    } else if (!isChecked && selectedMsgKeys.has(key)) {
+                        selectedMsgKeys.delete(key);
+                        cb.checked = false;
+                    }
+                }
+            });
+            updateSelectedCount();
+            updateSelectAllCheckboxState();
+        }
+        
         async function deleteSelectedForMe() {
-            if (selectedMsgKeys.size === 0) return;
+            if (selectedMsgKeys.size === 0) { showToast('No messages selected', 'red'); return; }
             for (let key of selectedMsgKeys) {
                 await chatRef.child(key + '/deletedBy/' + safeUser).set(true);
             }
             resetSelectModeUI(false);
             showToast(`🗑️ ${selectedMsgKeys.size} messages deleted for you`, 'green');
         }
+        
         async function deleteSelectedForEveryone() {
-            if (selectedMsgKeys.size === 0) return;
+            if (selectedMsgKeys.size === 0) { showToast('No messages selected', 'red'); return; }
             const promises = [];
             for (let key of selectedMsgKeys) {
                 const snap = await chatRef.child(key).once('value');
@@ -566,8 +646,10 @@
             if (currentRoom) db.ref(`typing_status/${currentRoom}/${safeUser}`).remove();
             closeEmojiPanel();
         }
+        
         function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); }
         function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
+        
         function toggleMenu(key) {
             const m = document.getElementById('menu-'+key);
             const v = m.style.display === 'block';
@@ -604,7 +686,7 @@
             document.getElementById('emojiPanel').classList.remove('show');
         }
         
-        // ===== DM & ROOMS (unchanged but ensure functions exist) =====
+        // ===== DM & ROOMS (unchanged for brevity, but all functions exist) =====
         function getDmRoomId(a,b) { const sa=a.replace(/[.#$[\] /]/g,'_'), sb=b.replace(/[.#$[\] /]/g,'_'); return [sa,sb].sort().join('__dm__'); }
         function sendDmRequest(targetUser) { if (targetUser===currentUser) { showToast('آپ خود سے DM نہیں کر سکتے', 'red'); return; }
             pendingDmTarget=targetUser; document.getElementById('dmSendText').innerHTML=`<strong style="color:white">${targetUser}</strong> کو request بھیجی جا رہی ہے...`;
