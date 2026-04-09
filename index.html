@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chat Pro</title>
+    <title>Chat Pro - Private Links</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -180,6 +180,26 @@
         .tab-btn { flex:1; padding: 8px; border-radius: 12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.75rem; }
         .tab-btn.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color:white; }
         .error-msg { color:#f87171; font-size:0.7rem; text-align:center; margin-top:5px; }
+
+        /* Link Modal special styling */
+        .link-url-container {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 0.75rem;
+            font-family: monospace;
+            border: 1px solid var(--glass-border);
+            color: #a78bfa;
+            text-align: center;
+        }
+        .copy-link-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            width: 100%;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +210,8 @@
         <div class="header-right">
             <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
+            <!-- NEW: Unique Invite Link Button for owner (right corner) -->
+            <button class="icon-btn" id="myLinkBtn" onclick="showMyUniqueLink()" style="background: rgba(16,185,129,0.15); border-color: #10b981;">🔗 My Link</button>
             <div class="user-chip" id="userChip" onclick="openMyProfileModal()">👤 پروفائل</div>
         </div>
     </div>
@@ -236,6 +258,19 @@
 
     <!-- PROFILE MODAL (view/edit) -->
     <div class="modal-overlay" id="profileModal"><div class="modal-box" id="profileModalContent"></div></div>
+
+    <!-- NEW: UNIQUE LINK MODAL (only owner sees own link) -->
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-box">
+            <h3>🔗 آپ کی ذاتی لنک (Your Unique Link)</h3>
+            <p style="font-size: 0.75rem; text-align: center; margin-bottom: 12px; color: #94a3b8;">یہ لنک صرف آپ کے لیے ہے — دوسرے نہیں دیکھ سکتے</p>
+            <div class="link-url-container" id="uniqueLinkDisplay"></div>
+            <div class="modal-actions">
+                <button class="btn-primary copy-link-btn" id="copyLinkBtn" onclick="copyUniqueLink()">📋 کاپی کریں</button>
+                <button class="btn-cancel" onclick="closeLinkModal()">بند کریں</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         firebase.initializeApp({ apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y", authDomain: "public-chat-app-e75fc.firebaseapp.com", databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/", projectId: "public-chat-app-e75fc" });
@@ -480,14 +515,42 @@
         function joinRoom(){ const rid=document.getElementById('joinRoomId').value.trim(); const pass=document.getElementById('joinPassword').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ closeRoomModal(); switchRoom(rid,snap.val().name,true,false,null); } else showToast('غلط room ID یا password','red'); }); }
         function deleteRoom(){ const rid=document.getElementById('deleteRoomId').value.trim(); const pass=document.getElementById('deleteRoomPass').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ snap.ref.remove(); if(currentRoom===rid) switchRoom('public','',false,false,null); closeRoomModal(); showToast('Room delete','red'); } }); }
         function showToast(msg,col){ const t=document.createElement('div'); t.textContent=msg; t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid ${col==='green'?'#22c55e':'#f87171'};color:${col==='green'?'#22c55e':'#f87171'};padding:8px 18px;border-radius:40px;z-index:9999;font-size:0.8rem`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
-        
+
+        // ---------- NEW: UNIQUE LINK FOR OWNER (right corner feature) ----------
+        function getMyUniqueLink() {
+            // Generate a shareable link that contains the current user's name as reference
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const inviteParam = `invite=${encodeURIComponent(currentUser)}`;
+            return `${baseUrl}?${inviteParam}`;
+        }
+
+        function showMyUniqueLink() {
+            const link = getMyUniqueLink();
+            const displayDiv = document.getElementById('uniqueLinkDisplay');
+            displayDiv.innerHTML = `<span style="word-break:break-all;">🔗 ${link}</span><br><small style="color:#94a3b8;">اس لنک کو شیئر کریں — کوئی بھی اسے کھول سکتا ہے، لیکن آپ کی شناخت آپ کے پاس ہے</small>`;
+            document.getElementById('linkModal').classList.add('active');
+        }
+
+        function copyUniqueLink() {
+            const link = getMyUniqueLink();
+            navigator.clipboard.writeText(link).then(() => {
+                showToast("✅ لنک کاپی ہو گیا! اب آپ اسے کہیں بھی شیئر کر سکتے ہیں", "green");
+            }).catch(() => {
+                showToast("کاپی نہیں ہو سکا، دستی طور پر کریں", "red");
+            });
+        }
+
+        function closeLinkModal() {
+            document.getElementById('linkModal').classList.remove('active');
+        }
+        // ----------------------------------------------------------------
+
         // Init
         refreshOnlineBar();
         loadMessages();
         document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
-        window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
+        window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(e.target===document.getElementById('linkModal')) closeLinkModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
         setupTypingForRoom('public');
-        // presRef must be declared BEFORE setInterval uses it
         const presRef = db.ref('presence/' + safeUser);
         presRef.set({ name: currentUser, online: true, t: Date.now() });
         presRef.onDisconnect().remove();
