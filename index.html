@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Family Chat Pro - لاگ ان کے ساتھ</title>
+    <title>Family Chat Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -27,80 +27,11 @@
             height: 100dvh;
             display: flex; flex-direction: column;
             overflow: hidden;
+            padding-top: env(safe-area-inset-top);
+            touch-action: pan-y pinch-zoom; /* better touch */
         }
 
-        /* لاگ ان اسکرین */
-        .login-overlay {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at center, #0f172a, #020617);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(20px);
-        }
-        .login-card {
-            background: rgba(30,41,59,0.95);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 40px;
-            padding: 32px 24px;
-            width: 90%;
-            max-width: 380px;
-            text-align: center;
-            box-shadow: 0 25px 50px -12px black;
-            animation: fadeUp 0.4s ease-out;
-        }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .login-card h2 {
-            background: linear-gradient(135deg, #a855f7, #6366f1);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 24px;
-            font-size: 1.8rem;
-        }
-        .login-input {
-            width: 100%;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid var(--glass-border);
-            border-radius: 32px;
-            padding: 14px 18px;
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 16px;
-            font-family: inherit;
-        }
-        .login-btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 40px;
-            font-weight: bold;
-            font-size: 1rem;
-            color: white;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .login-btn:hover { opacity: 0.9; transform: scale(0.98); }
-        .error-login {
-            color: #f87171;
-            font-size: 0.75rem;
-            margin-top: 12px;
-        }
-        .register-text {
-            margin-top: 16px;
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-        .app-container {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-        }
+        /* HEADER */
         .top-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 10px 14px;
@@ -113,9 +44,12 @@
         .room-title { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; }
         .room-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-        .user-chip { background: linear-gradient(135deg,var(--primary),var(--secondary)); padding: 5px 11px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: #c084fc; padding: 6px 11px; border-radius: 18px; font-size: 0.72rem; cursor: pointer; }
+        .user-chip { background: linear-gradient(135deg,var(--primary),var(--secondary)); padding: 5px 11px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+        .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: #c084fc; padding: 6px 11px; border-radius: 18px; font-size: 0.72rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+        .icon-btn:hover { background: rgba(168,85,247,0.25); }
         .leave-btn { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 4px 9px; border-radius: 12px; font-size: 0.68rem; cursor: pointer; flex-shrink: 0; }
+
+        /* ONLINE USERS BAR + TYPING INDICATOR */
         .online-bar {
             display: flex; align-items: center; gap: 10px;
             padding: 8px 14px; overflow-x: auto;
@@ -124,419 +58,255 @@
             scrollbar-width: none; flex-shrink: 0; min-height: 66px;
         }
         .online-bar::-webkit-scrollbar { display: none; }
-        .user-avatar { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; width: 50px; }
-        .av-circle { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg,var(--primary),var(--secondary)); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; position: relative; border: 2px solid transparent; overflow: hidden; }
-        .av-circle img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .av-circle .online-dot { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); border: 2px solid #0f172a; }
-        .av-name { font-size: 0.6rem; color: var(--text-dim); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .typing-indicator { background: rgba(99,102,241,0.2); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); padding: 5px 14px; font-size: 0.7rem; color: #a78bfa; white-space: nowrap; overflow-x: auto; flex-shrink: 0; backdrop-filter: blur(8px); display: none; }
+        .online-bar-label { font-size: 0.63rem; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+        .user-avatar { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; animation: fadeIn 0.3s ease-out; }
+        .av-circle {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: linear-gradient(135deg,var(--primary),var(--secondary));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; position: relative;
+            border: 2px solid transparent; transition: border 0.2s;
+        }
+        .user-avatar:hover .av-circle { border: 2px solid #c084fc; }
+        .av-circle .online-dot { position: absolute; bottom: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--green); border: 2px solid #0f172a; }
+        .av-name { font-size: 0.58rem; color: var(--text-dim); max-width: 42px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-avatar.me .av-circle { background: linear-gradient(135deg,#334155,#475569); }
+        .user-avatar.me .av-name { color: #6366f1; }
+        .no-online { font-size: 0.72rem; color: var(--text-dim); }
+
+        /* TYPING BAR */
+        .typing-indicator {
+            background: rgba(99,102,241,0.2);
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 5px 14px;
+            font-size: 0.7rem;
+            color: #a78bfa;
+            white-space: nowrap;
+            overflow-x: auto;
+            flex-shrink: 0;
+            backdrop-filter: blur(8px);
+        }
+        .typing-indicator span {
+            display: inline-block;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* MESSAGES */
         #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 11px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        #messages::-webkit-scrollbar { display: none; }
+        .date-divider { text-align: center; margin: 14px 0 6px; }
+        .date-divider span { background: rgba(255,255,255,0.08); padding: 3px 11px; border-radius: 10px; font-size: 0.68rem; color: var(--text-dim); }
         .msg { max-width: 82%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; position: relative; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
         .sent { align-self: flex-end; align-items: flex-end; }
         .received { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.93rem; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid var(--glass-border); word-break: break-word; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.93rem; position: relative; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid var(--glass-border); word-break: break-word; }
         .sent .bubble { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; border-bottom-right-radius: 4px; border: none; }
         .received .bubble { background: var(--glass-bg); border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; display: flex; gap: 5px; }
-        .selection-toolbar { background: #1e293b; border-bottom: 1px solid var(--glass-border); padding: 6px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 0.75rem; flex-wrap: wrap; }
+        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .msg-info .info-name { color: #c084fc; font-weight: 600; }
+        .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #1e293b; border: 1px solid var(--glass-border); border-radius: 12px; z-index: 200; width: 158px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .del-menu button { width: 100%; padding: 11px; border: none; background: none; color: white; text-align: left; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); transition: background 0.1s; }
+        .del-menu button:hover { background: rgba(255,255,255,0.08); }
+        .deleted-msg { font-style: italic; opacity: 0.5; font-size: 0.83rem; }
+        
+        /* MULTI-SELECT CHECKBOX */
+        .msg-select-checkbox {
+            position: absolute;
+            left: -28px;
+            top: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+            z-index: 5;
+        }
+        .sent .msg-select-checkbox { left: auto; right: -28px; }
+        .msg.select-mode { margin-left: 28px; }
+        .sent.select-mode { margin-right: 28px; margin-left: 0; }
+        
+        /* SELECTION TOOLBAR */
+        .selection-toolbar {
+            background: #1e293b;
+            border-bottom: 1px solid var(--glass-border);
+            padding: 6px 14px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+        .selection-actions { display: flex; gap: 10px; }
+        .selection-actions button { background: rgba(255,255,255,0.1); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.7rem; font-weight: 600; }
+        .selection-actions .del-me-btn { background: rgba(248,113,113,0.2); color: #f87171; }
+        .selection-actions .del-everyone-btn { background: rgba(239,68,68,0.3); color: #ff9f9f; }
+        .cancel-select { background: transparent; border: 1px solid var(--glass-border); }
+
+        /* INPUT + EMOJI PICKER */
         .input-container { padding: 9px 14px 5px; background: rgba(15,23,42,0.5); flex-shrink: 0; }
         .input-wrapper { background: rgba(30,41,59,0.9); border: 1px solid var(--glass-border); border-radius: 28px; display: flex; padding: 5px 5px 5px 16px; align-items: center; gap: 4px; }
         .input-wrapper input { flex: 1; background: none; border: none; color: white; font-size: 0.93rem; font-family: inherit; padding: 8px 0; }
-        .emoji-btn, .send-btn { background: none; border: none; cursor: pointer; }
-        .send-btn { width: 40px; height: 40px; border-radius: 50%; background: white; color: var(--bg-dark); font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
-        .emoji-panel { position: absolute; bottom: 75px; left: 10px; right: 10px; background: #1e293b; border-radius: 24px; border: 1px solid var(--glass-border); backdrop-filter: blur(20px); padding: 12px; display: none; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); max-height: 200px; overflow-y: auto; z-index: 100; }
+        .emoji-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0 6px; color: #cbd5e1; transition: transform 0.1s; }
+        .emoji-btn:active { transform: scale(0.9); }
+        .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; color: var(--bg-dark); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .emoji-panel {
+            position: absolute;
+            bottom: 75px;
+            left: 10px;
+            right: 10px;
+            background: #1e293b;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            padding: 12px;
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
         .emoji-panel.show { display: grid; }
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: #1e293b; border: 1px solid var(--glass-border); border-radius: 24px; padding: 20px; width: 90%; max-width: 380px; animation: popIn 0.25s ease-out; }
-        .profile-pic-large { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; background: linear-gradient(135deg,var(--primary),var(--secondary)); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 3px solid #c084fc; }
-        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
-        .profile-note { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 16px; font-size: 0.8rem; color: #cbd5e1; text-align: center; margin: 10px 0; word-break: break-word; }
-        .file-input-label { background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 8px; border-radius: 40px; text-align: center; font-size: 0.7rem; cursor: pointer; margin-top: 5px; display: block; }
-        .personal-link-btn { background: rgba(99,102,241,0.2); border: 1px solid #6366f1; border-radius: 40px; padding: 8px; text-align: center; font-size: 0.75rem; margin-top: 12px; cursor: pointer; color: #a5b4fc; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-primary { flex:1; padding:11px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-weight:600; cursor:pointer; }
-        .btn-cancel { flex:1; padding:11px; border:1px solid var(--glass-border); border-radius:14px; background:transparent; color:var(--text-dim); cursor:pointer; }
+        .emoji-item {
+            font-size: 1.7rem;
+            text-align: center;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 16px;
+            transition: background 0.1s;
+        }
+        .emoji-item:active { background: rgba(255,255,255,0.2); }
         .bottom-safe-bar { height: env(safe-area-inset-bottom,18px); background: #0f172a; width: 100%; flex-shrink: 0; }
-        .dm-badge { background: linear-gradient(135deg,#22c55e,#16a34a); padding: 2px 8px; border-radius: 8px; font-size: 0.62rem; }
-        .toast-msg { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1e293b; border-radius:40px; padding:8px 18px; z-index:9999; font-size:0.8rem; border:1px solid var(--green); color:var(--green); }
-        .modal-field { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 11px 15px; color: white; font-size: 0.88rem; width: 100%; margin-bottom: 12px; font-family: inherit; }
+
+        /* DM REQUEST NOTIFICATION */
+        .dm-request-popup { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; display: flex; flex-direction: column; gap: 8px; padding: 12px; pointer-events: none; }
+        .dm-notif { background: #1e293b; border: 1px solid rgba(99,102,241,0.6); border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); pointer-events: all; animation: slideDown 0.35s ease-out; display: flex; flex-direction: column; gap: 10px; }
+        @keyframes slideDown { from{transform:translateY(-110%);opacity:0} to{transform:translateY(0);opacity:1} }
+        .notif-top { display: flex; align-items: center; gap: 10px; }
+        .notif-av { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg,var(--primary),var(--secondary)); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700; flex-shrink: 0; }
+        .notif-text .nt { font-size: 0.7rem; color: var(--text-dim); }
+        .notif-text .nb { font-size: 0.9rem; font-weight: 600; margin-top: 2px; }
+        .notif-btns { display: flex; gap: 8px; }
+        .accept-btn { flex:1; padding:9px; border:none; border-radius:10px; background:linear-gradient(135deg,#22c55e,#16a34a); color:white; font-size:0.82rem; cursor:pointer; font-weight:600; }
+        .decline-btn { flex:1; padding:9px; border:1px solid rgba(248,113,113,0.4); border-radius:10px; background:rgba(248,113,113,0.1); color:#f87171; font-size:0.82rem; cursor:pointer; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: #1e293b; border: 1px solid var(--glass-border); border-radius: 20px; padding: 26px 22px; width: 90%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: popIn 0.25s ease-out; }
+        @keyframes popIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+        .modal-box h3 { font-size: 1.05rem; margin-bottom: 16px; text-align: center; background: linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal-field { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; padding: 11px 15px; color: white; font-size: 0.88rem; width: 100%; margin-bottom: 11px; font-family: inherit; }
+        .modal-field::placeholder { color: var(--text-dim); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+        .btn-primary { flex:1; padding:11px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:0.88rem; cursor:pointer; font-weight:600; }
+        .btn-cancel { flex:1; padding:11px; border:1px solid var(--glass-border); border-radius:12px; background:transparent; color:var(--text-dim); font-size:0.88rem; cursor:pointer; }
+        .btn-danger { flex:1; padding:11px; border:none; border-radius:12px; background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; font-size:0.88rem; cursor:pointer; font-weight:600; }
+        .room-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; max-height: 180px; overflow-y: auto; }
+        .room-item { display: flex; align-items: center; justify-content: space-between; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 9px 13px; cursor: pointer; transition: background 0.2s; }
+        .room-item:hover { background: rgba(255,255,255,0.1); }
+        .room-item .rname { font-size: 0.87rem; font-weight: 600; }
+        .room-item .rbadge { background: rgba(168,85,247,0.2); border: 1px solid rgba(168,85,247,0.4); color: #c084fc; padding: 2px 7px; border-radius: 7px; font-size: 0.63rem; }
+        .tab-btns { display: flex; gap: 7px; margin-bottom: 14px; }
+        .tab-btn { flex:1; padding:8px; border-radius:10px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.75rem; transition:all 0.2s; }
+        .tab-btn.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color:white; border-color:transparent; }
+        .tab-btn.delete-tab.active { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .error-msg { color: #f87171; font-size: 0.78rem; text-align: center; margin-top: 7px; }
+
+        /* DM waiting modal */
+        .dm-badge { background: linear-gradient(135deg,#22c55e,#16a34a); padding: 2px 8px; border-radius: 8px; font-size: 0.62rem; color: white; }
+        .sending-state { text-align: center; padding: 16px 0; }
+        .spin { font-size: 2.2rem; display: inline-block; animation: spin 1.2s linear infinite; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .sending-state p { color: var(--text-dim); font-size: 0.85rem; margin-top: 10px; line-height: 1.5; }
+        
+        /* touch optimizations */
+        button, .icon-btn, .user-avatar, .send-btn, .emoji-btn, .room-item {
+            touch-action: manipulation;
+        }
     </style>
 </head>
 <body>
 
-<!-- لاگ ان اسکرین -->
-<div class="login-overlay" id="loginOverlay">
-    <div class="login-card">
-        <h2>👨‍👩‍👧‍👦 Family Chat Pro</h2>
-        <input type="text" id="loginUsername" class="login-input" placeholder="اپنا نام لکھیں" autocomplete="off">
-        <input type="password" id="loginPassword" class="login-input" placeholder="پاس ورڈ (کم از کم 4 حروف)">
-        <button class="login-btn" id="loginBtn">✅ لاگ ان / رجسٹر</button>
-        <div class="register-text">✨ نیا صارف؟ بس پاس ورڈ سیٹ کریں اور اکاؤنٹ خود بَن جائے گا</div>
-        <div id="loginErrorMsg" class="error-login"></div>
-    </div>
-</div>
-
-<!-- مین ایپ -->
-<div class="app-container" id="appContainer">
+    <!-- HEADER -->
     <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬 Family Chat</span></div>
+        <div class="room-title" id="headerLeft"><span>💬</span></div> <!-- Family Chat text removed -->
         <div class="header-right">
             <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
-            <div class="user-chip" id="userChip" onclick="openMyProfileModal()">👤 پروفائل</div>
-            <button class="leave-btn" id="logoutBtn">🚪 خروج</button>
+            <div class="user-chip" id="userChip">...</div>
         </div>
     </div>
-    <div class="online-bar" id="onlineBar"><span class="online-bar-label">🟢 Online:</span><span class="no-online">لوڈ ہو رہا...</span></div>
-    <div id="typingIndicator" class="typing-indicator">✍️ <span id="typingUsersText"></span> ٹائپ کر رہا ہے...</div>
+
+    <!-- ONLINE USERS BAR -->
+    <div class="online-bar" id="onlineBar">
+        <span class="online-bar-label">🟢 Online:</span>
+        <span class="no-online" id="noOnline">لوڈ ہو رہا ہے...</span>
+    </div>
+
+    <!-- TYPING INDICATOR -->
+    <div id="typingIndicator" class="typing-indicator" style="display: none;">✍️ <span id="typingUsersText"></span> ٹائپ کر رہا ہے...</div>
+
+    <!-- MESSAGES -->
     <div id="messages"></div>
-    <div id="selectionToolbar" class="selection-toolbar" style="display: none;"></div>
+
+    <!-- MULTI-SELECT TOOLBAR -->
+    <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+        <span id="selectedCount">0 selected</span>
+        <div class="selection-actions">
+            <button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button>
+            <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete for everyone</button>
+            <button class="cancel-select" onclick="toggleMultiSelectMode(false)">Cancel</button>
+        </div>
+    </div>
+
+    <!-- INPUT + EMOJI -->
     <div class="input-container">
         <div class="input-wrapper">
             <input type="text" id="inp" placeholder="پیغام لکھیں..." autocomplete="off">
             <button class="emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
             <button class="send-btn" onclick="send()">↑</button>
         </div>
-        <div id="emojiPanel" class="emoji-panel"></div>
+        <div id="emojiPanel" class="emoji-panel">
+            <!-- common emojis loaded via JS -->
+        </div>
     </div>
     <div class="bottom-safe-bar"></div>
-</div>
 
-<!-- موڈلز -->
-<div class="modal-overlay" id="roomModal"><div class="modal-box"><h3>🔒 Private Rooms</h3><div id="roomModalContent"><p style="color:#94a3b8;">رومز فیچر اسی طرح کام کرے گا۔ پہلے لاگ ان کریں۔</p></div></div></div>
-<div class="modal-overlay" id="profileModal"><div class="modal-box" id="profileModalContent"></div></div>
+    <!-- DM NOTIFICATIONS CONTAINER -->
+    <div class="dm-request-popup" id="dmRequestPopup"></div>
 
-<script>
-    // Firebase Config
-    const firebaseConfig = {
-        apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y",
-        authDomain: "public-chat-app-e75fc.firebaseapp.com",
-        databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/",
-        projectId: "public-chat-app-e75fc"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const usersAuthRef = db.ref('registered_users');
-    
-    let currentUser = null;
-    let currentUserSafe = null;
-    let currentRoom = 'public';
-    let chatRef = db.ref('chats');
-    let chatListener = null;
-    let selectModeActive = false;
-    let selectedMsgKeys = new Set();
-    let typingTimeout = null;
-    let currentTypingListener = null;
-    let onlineUsersListener = null;
-    let currentUserProfile = { pic: null, note: "ہیلو! میں یہاں ہوں۔", personalLink: "" };
-    
-    // ========== لاگ ان سسٹم ==========
-    async function handleLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-        const errorDiv = document.getElementById('loginErrorMsg');
-        
-        if(!username) {
-            errorDiv.innerText = '❌ براہ کرم نام لکھیں';
-            return;
-        }
-        if(!password || password.length < 4) {
-            errorDiv.innerText = '❌ پاس ورڈ کم از کم 4 حروف ہونا چاہیے';
-            return;
-        }
-        
-        const safeName = username.replace(/[.#$[\]/]/g, '_');
-        const userRef = usersAuthRef.child(safeName);
-        
-        try {
-            const snap = await userRef.once('value');
-            const passwordHash = btoa(password + '_fc_salt_2024');
-            
-            if(snap.exists()) {
-                // یوزر موجود ہے - پاس ورڈ چیک کریں
-                const storedHash = snap.val().passwordHash;
-                if(storedHash !== passwordHash) {
-                    errorDiv.innerText = '🔑 غلط پاس ورڈ! دوبارہ کوشش کریں۔';
-                    return;
-                }
-                // پاس ورڈ درست
-                currentUser = snap.val().originalName;
-                currentUserSafe = safeName;
-            } else {
-                // نیا یوزر - رجسٹر کریں
-                await userRef.set({
-                    originalName: username,
-                    passwordHash: passwordHash,
-                    createdAt: Date.now()
-                });
-                currentUser = username;
-                currentUserSafe = safeName;
-            }
-            
-            // لاگ ان کامیاب
-            localStorage.setItem('loggedInUser', currentUser);
-            localStorage.setItem('loggedInSafe', currentUserSafe);
-            errorDiv.innerText = '';
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'flex';
-            initializeAppAfterLogin();
-            
-        } catch(err) {
-            console.error(err);
-            errorDiv.innerText = '⚠️ فائر بیس کنیکشن میں مسئلہ، دوبارہ کوشش کریں';
-        }
-    }
-    
-    function logout() {
-        if(chatListener) chatRef.off('value', chatListener);
-        if(currentTypingListener) currentTypingListener();
-        if(onlineUsersListener) db.ref('presence').off('value', onlineUsersListener);
-        if(currentUserSafe) db.ref('presence/' + currentUserSafe).remove();
-        localStorage.removeItem('loggedInUser');
-        localStorage.removeItem('loggedInSafe');
-        currentUser = null;
-        currentUserSafe = null;
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('appContainer').style.display = 'none';
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginErrorMsg').innerText = '';
-    }
-    
-    // آٹو لاگ ان چیک
-    const savedUser = localStorage.getItem('loggedInUser');
-    const savedSafe = localStorage.getItem('loggedInSafe');
-    if(savedUser && savedSafe) {
-        currentUser = savedUser;
-        currentUserSafe = savedSafe;
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'flex';
-        initializeAppAfterLogin();
-    } else {
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('appContainer').style.display = 'none';
-    }
-    
-    document.getElementById('loginBtn').onclick = handleLogin;
-    document.getElementById('loginUsername').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
-    document.getElementById('loginPassword').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
-    
-    // ========== ایپ انیشیلائزیشن ==========
-    async function initializeAppAfterLogin() {
-        document.getElementById('userChip').innerHTML = "👤 " + currentUser;
-        document.getElementById('logoutBtn').onclick = () => logout();
-        
-        // پروفائل لوڈ کریں
-        const profilesRef = db.ref('user_profiles');
-        const snap = await profilesRef.child(currentUserSafe).once('value');
-        if(snap.exists()) {
-            const data = snap.val();
-            currentUserProfile.pic = data.pic || null;
-            currentUserProfile.note = data.note || "ہیلو! میں یہاں ہوں۔";
-            currentUserProfile.personalLink = data.personalLink || "";
-        } else {
-            currentUserProfile = { pic: null, note: "خوش آمدید! 👋", personalLink: "" };
-            saveProfileToDB();
-        }
-        
-        refreshOnlineBar();
-        loadMessages();
-        setupTypingForRoom('public');
-        startPresence();
-    }
-    
-    function startPresence() {
-        const presRef = db.ref('presence/' + currentUserSafe);
-        presRef.set({ name: currentUser, online: true, t: Date.now() });
-        presRef.onDisconnect().remove();
-        setInterval(() => { if(currentUserSafe) presRef.update({ t: Date.now() }); }, 20000);
-    }
-    
-    async function refreshOnlineBar() {
-        if(onlineUsersListener) db.ref('presence').off('value', onlineUsersListener);
-        onlineUsersListener = db.ref('presence').on('value', async (snap) => {
-            const bar = document.getElementById('onlineBar');
-            bar.innerHTML = '<span class="online-bar-label">🟢 Online:</span>';
-            if(!snap.exists()) { bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>'; return; }
-            const usersList = [];
-            snap.forEach(child => { const u = child.val(); if(u && u.name) usersList.push({ name: u.name, id: child.key }); });
-            for(let u of usersList) {
-                const profile = await getUserProfile(u.id);
-                const isMe = (u.id === currentUserSafe);
-                const av = document.createElement('div');
-                av.className = 'user-avatar' + (isMe ? ' me' : '');
-                let picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span>${u.name.charAt(0).toUpperCase()}</span>`;
-                av.innerHTML = `<div class="av-circle">${picHtml}<div class="online-dot"></div></div><div class="av-name">${isMe ? 'You' : u.name}</div>`;
-                if(!isMe) av.onclick = () => viewUserProfile(u.name, u.id);
-                else av.onclick = () => openMyProfileModal();
-                bar.appendChild(av);
-            }
-            if(usersList.length === 0) bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>';
-        });
-    }
-    
-    async function getUserProfile(userId) {
-        const snap = await db.ref('user_profiles/' + userId).once('value');
-        if(snap.exists()) return snap.val();
-        return { pic: null, note: "مزاج ہے؟", personalLink: "" };
-    }
-    
-    function saveProfileToDB() {
-        const profilesRef = db.ref('user_profiles');
-        profilesRef.child(currentUserSafe).update({
-            pic: currentUserProfile.pic || null,
-            note: currentUserProfile.note,
-            personalLink: currentUserProfile.personalLink || "",
-            updatedAt: Date.now()
-        });
-    }
-    
-    // ========== پروفائل موڈل (ذاتی لنک والا) ==========
-    function openMyProfileModal() {
-        const modal = document.getElementById('profileModal');
-        const content = document.getElementById('profileModalContent');
-        content.innerHTML = `
-            <h3>📸 ${currentUser} کا پروفائل</h3>
-            <div style="text-align:center">
-                <div class="profile-pic-large" id="myProfilePicPreview">
-                    ${currentUserProfile.pic ? `<img src="${currentUserProfile.pic}">` : `<span style="font-size:2rem">${currentUser.charAt(0).toUpperCase()}</span>`}
+    <!-- ROOM MODAL -->
+    <div class="modal-overlay" id="roomModal">
+        <div class="modal-box">
+            <h3>🔒 Private Rooms</h3>
+            <div class="tab-btns">
+                <button class="tab-btn active" onclick="switchTab('join')">Join</button>
+                <button class="tab-btn" onclick="switchTab('create')">Create</button>
+                <button class="tab-btn delete-tab" onclick="switchTab('delete')">🗑️ Delete</button>
+            </div>
+            <div class="tab-content active" id="tab-join">
+                <div id="roomListContainer" class="room-list"></div>
+                <p style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px;text-align:center;">یا Room ID اور Password درج کریں</p>
+                <input class="modal-field" id="joinRoomId" placeholder="Room ID">
+                <input class="modal-field" type="password" id="joinPassword" placeholder="Password">
+                <div id="joinError" class="error-msg"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeRoomModal()">Cancel</button>
+                    <button class="btn-primary" onclick="joinRoom()">Join ▶</button>
                 </div>
-                <label class="file-input-label">📷 تصویر تبدیل کریں<input type="file" id="profileImageInput" accept="image/*"></label>
             </div>
-            <textarea id="profileNoteInput" class="modal-field" rows="2" placeholder="اپنی حالت لکھیں" maxlength="80">${currentUserProfile.note || ''}</textarea>
-            <div style="margin: 8px 0;">
-                <label style="font-size:0.7rem; color:#a78bfa;">🔗 ذاتی لنک (اپنا ویب لنک ڈالیں)</label>
-                <input type="text" id="personalLinkInput" class="modal-field" placeholder="https://example.com" value="${currentUserProfile.personalLink || ''}">
-            </div>
-            <div class="personal-link-btn" id="openPersonalLinkBtn">
-                🌐 میرا ذاتی لنک کھولیں
-            </div>
-            <div class="modal-actions" style="margin-top: 16px;">
-                <button class="btn-cancel" onclick="closeProfileModal()">Cancel</button>
-                <button class="btn-primary" onclick="updateMyProfile()">محفوظ کریں</button>
-            </div>
-        `;
-        modal.classList.add('active');
-        
-        const fileInput = document.getElementById('profileImageInput');
-        if(fileInput) {
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if(file) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            const size = 150;
-                            canvas.width = size; canvas.height = size;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, size, size);
-                            const base64 = canvas.toDataURL('image/jpeg', 0.6);
-                            const previewDiv = document.getElementById('myProfilePicPreview');
-                            if(previewDiv) previewDiv.innerHTML = `<img src="${base64}">`;
-                            currentUserProfile.pic = base64;
-                        };
-                        img.src = ev.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-        }
-        
-        const openLinkBtn = document.getElementById('openPersonalLinkBtn');
-        if(openLinkBtn) {
-            openLinkBtn.onclick = () => {
-                let linkVal = document.getElementById('personalLinkInput')?.value.trim() || '';
-                if(linkVal) {
-                    if(!linkVal.startsWith('http://') && !linkVal.startsWith('https://')) {
-                        linkVal = 'https://' + linkVal;
-                    }
-                    window.open(linkVal, '_blank');
-                } else {
-                    showToast("پہلے لنک ڈالیں", "red");
-                }
-            };
-        }
-    }
-    
-    function updateMyProfile() {
-        const newNote = document.getElementById('profileNoteInput')?.value.trim();
-        const newLink = document.getElementById('personalLinkInput')?.value.trim();
-        if(newNote) currentUserProfile.note = newNote;
-        if(newLink !== undefined) currentUserProfile.personalLink = newLink;
-        saveProfileToDB();
-        closeProfileModal();
-        showToast("پروفائل اپڈیٹ ہو گیا", "green");
-        refreshOnlineBar();
-    }
-    
-    async function viewUserProfile(userName, userId) {
-        const profile = await getUserProfile(userId);
-        const picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span style="font-size:2rem">${userName.charAt(0).toUpperCase()}</span>`;
-        const modal = document.getElementById('profileModal');
-        document.getElementById('profileModalContent').innerHTML = `
-            <h3>👤 ${userName}</h3>
-            <div style="text-align:center">
-                <div class="profile-pic-large">${picHtml}</div>
-                <div class="profile-note">📝 "${profile.note || 'کوئی نوٹ نہیں'}"</div>
-                ${profile.personalLink ? `<div class="personal-link-btn" id="viewUserLinkBtn">🔗 ذاتی لنک دیکھیں</div>` : '<div style="font-size:0.7rem; color:#475569;">🔗 کوئی لنک نہیں</div>'}
-            </div>
-            <div class="modal-actions">
-                <button class="btn-primary" onclick="sendDmFromProfile('${userName.replace(/'/g, "\\'")}')">💬 پیغام بھیجیں</button>
-                <button class="btn-cancel" onclick="closeProfileModal()">بند کریں</button>
-            </div>
-        `;
-        modal.classList.add('active');
-        if(profile.personalLink) {
-            setTimeout(() => {
-                const linkBtn = document.getElementById('viewUserLinkBtn');
-                if(linkBtn) linkBtn.onclick = () => window.open(profile.personalLink, '_blank');
-            }, 50);
-        }
-    }
-    
-    function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
-    function sendDmFromProfile(targetUser) { closeProfileModal(); showToast("DM بھیجنے کی سہولت جلد آرہی ہے", "green"); }
-    
-    // ========== چیٹ فنکشنز ==========
-    function setupTypingForRoom(roomId) {
-        if(currentTypingListener) currentTypingListener();
-        const typingQuery = db.ref(`typing_status/${roomId}`);
-        const listener = typingQuery.on('value', snap => {
-            const div = document.getElementById('typingIndicator');
-            if(!snap.exists()) { div.style.display = 'none'; return; }
-            const typingUsers = [];
-            snap.forEach(child => { 
-                const val = child.val(); 
-                if(val && val.name && val.name !== currentUser && val.active) 
-                    typingUsers.push(val.name); 
-            });
-            if(typingUsers.length === 0) div.style.display = 'none';
-            else { document.getElementById('typingUsersText').innerText = typingUsers.slice(0,3).join(', ') + (typingUsers.length>3 ? '...' : ''); div.style.display = 'block'; }
-        });
-        currentTypingListener = () => typingQuery.off('value', listener);
-        const inputElem = document.getElementById('inp');
-        const updateTyping = (isTyping) => { 
-            const ref = db.ref(`typing_status/${roomId}/${currentUserSafe}`); 
-            if(isTyping) { ref.set({ name: currentUser, active: true }); ref.onDisconnect().remove(); } 
-            else ref.remove(); 
-        };
-        const handleInput = () => { updateTyping(true); if(typingTimeout) clearTimeout(typingTimeout); typingTimeout = setTimeout(() => updateTyping(false), 1200); };
-        inputElem.removeEventListener('input', handleInput);
-        inputElem.addEventListener('input', handleInput);
-    }
-    
-    function loadMessages() {
-        const box = document.getElementById('messages');
-        box.innerHTML = ''; let lastDate = '';
-        if(chatListener) chatRef.off('value', chatListener);
-        chatListener = chatRef.orderByChild('timestamp').on('value', snap => {
-            box.innerHTML = ''; lastDate = '';
-            snap.forEach(child => {
-                const d = child.val(); const key = child.key;
-                if(d.deletedBy && d.deletedBy[currentUserSafe]) return;
-                if(d.date && d.date !== lastDate) { const dd = document.createElement('div'); dd.className = 'date-divider'; dd.innerHTML = `<span>📅 ${d.date}</span>`; box.appendChild(dd); lastDate = d.date; }
-                const isSent = (d.name === currentUser);
-                const div = document.createElement('div'); div.className = 'msg ' + (isSent ? 'sent' : 'received');
-                const content = d.isDeletedEveryone ? `<span class="deleted-msg">🚫 ڈیلیٹ شدہ</span>` : (
+            <div class="tab-content" id="tab-create">
+                <input class="modal-field" id="newRoomId" placeholder="Room ID (letters/numbers)">
+                <input class="modal-field" id="newRoomName" placeholder="Room Display Name">
+                <input class="modal-field" type="password" id="newRoomPass" placeholder="Password">
+                <div id="createError" class="error-msg"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeRoomModal()">Cancel</button>
+                    <button class="btn-primary" onclick="createRoom()">Create ✓</
