@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Family Chat Pro - پروفائل تصویر اور نوٹ کے ساتھ</title>
+    <title>Chat Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -186,7 +186,7 @@
 
     <!-- HEADER -->
     <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬 Family Chat</span></div>
+        <div class="room-title" id="headerLeft"><span>💬 Group Chat</span></div>
         <div class="header-right">
             <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
             <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
@@ -360,7 +360,8 @@
                 bar.innerHTML = '<span class="online-bar-label">🟢 Online:</span>';
                 if (!snap.exists()) { bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>'; return; }
                 let usersList = [];
-                snap.forEach(child => { const u = child.val(); if (u && u.name) usersList.push({ name: u.name, id: child.key }); });
+                const now = Date.now();
+                snap.forEach(child => { const u = child.val(); if (u && u.name && u.t && (now - u.t) < 60000) usersList.push({ name: u.name, id: child.key }); });
                 for (let u of usersList) {
                     const profile = await getUserProfile(u.id, u.name);
                     const isMe = u.name === currentUser;
@@ -394,7 +395,7 @@
             const hl = document.getElementById('headerLeft');
             if (isDm) { chatRef = db.ref('dm_chats/' + roomId + '/messages'); hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`; }
             else if (isPrivate) { chatRef = db.ref('private_rooms/' + roomId + '/messages'); hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`; }
-            else { chatRef = db.ref('chats'); hl.innerHTML = `<span>💬 Family Chat</span>`; }
+            else { chatRef = db.ref('chats'); hl.innerHTML = `<span>💬 Group Chat</span>`; }
             resetSelectModeUI(false);
             loadMessages();
             setupTypingForRoom(roomId);
@@ -486,10 +487,11 @@
         document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
         window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
         setupTypingForRoom('public');
-        setInterval(()=>{ presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
+        // presRef must be declared BEFORE setInterval uses it
         const presRef = db.ref('presence/' + safeUser);
-        presRef.set({ name: currentUser, online: true });
+        presRef.set({ name: currentUser, online: true, t: Date.now() });
         presRef.onDisconnect().remove();
+        setInterval(()=>{ presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
     </script>
 </body>
 </html>
