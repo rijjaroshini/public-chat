@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chat Pro · Image Share + Private Rooms</title>
+    <title>Chat Pro · Image Download + Delete</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -171,6 +171,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             word-break: break-word;
             cursor: pointer;
+            position: relative;
         }
         .sent .bubble {
             background: linear-gradient(135deg, var(--primary), #7c3aed);
@@ -186,11 +187,35 @@
             max-width: 220px;
             border-radius: 16px;
             cursor: pointer;
+            position: relative;
         }
         .image-message img {
             width: 100%;
             border-radius: 16px;
             display: block;
+        }
+        .image-delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            backdrop-filter: blur(4px);
+            transition: 0.1s;
+            z-index: 10;
+        }
+        .image-delete-btn:hover {
+            background: #ef4444;
+            transform: scale(1.05);
         }
         .msg-info { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; padding: 0 6px; }
         .selection-toolbar {
@@ -323,8 +348,33 @@
         .room-item { background: var(--glass-bg); padding: 10px; border-radius: 18px; margin-bottom: 8px; cursor: pointer; }
         .msg-select-checkbox { position: absolute; left: -28px; top: 12px; width: 18px; height: 18px; accent-color: var(--primary); }
         .sent .msg-select-checkbox { left: auto; right: -28px; }
-        .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #0f172a; border-radius: 18px; width: 140px; overflow: hidden; z-index: 200; border: 1px solid var(--glass-border);}
-        .del-menu button { width: 100%; padding: 8px 12px; background: none; border: none; color: white; text-align: left; font-size: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--glass-border);}
+        .del-menu {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            right: 0;
+            background: #0f172a;
+            border-radius: 18px;
+            width: 160px;
+            overflow: hidden;
+            z-index: 200;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .del-menu button {
+            width: 100%;
+            padding: 10px 12px;
+            background: none;
+            border: none;
+            color: white;
+            text-align: left;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--glass-border);
+            transition: 0.1s;
+        }
+        .del-menu button:last-child { border-bottom: none; }
+        .del-menu button:hover { background: rgba(255,255,255,0.1); }
         .full-image-modal {
             position: fixed;
             top: 0;
@@ -334,15 +384,44 @@
             background: rgba(0,0,0,0.95);
             z-index: 2000;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
         }
         .full-image-modal img {
             max-width: 95%;
-            max-height: 95%;
+            max-height: 85%;
             object-fit: contain;
         }
+        .download-btn-container {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 2001;
+        }
+        .download-btn {
+            background: #22c55e;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: 0.1s;
+        }
+        .download-btn:hover {
+            background: #16a34a;
+            transform: scale(1.02);
+        }
+        .deleted-msg { opacity: 0.6; font-style: italic; }
     </style>
 </head>
 <body>
@@ -423,6 +502,27 @@
         setTimeout(() => t.remove(), 2800);
     }
 
+    // Download image function
+    function downloadImage(imageSrc, filename = 'chat_image.jpg') {
+        fetch(imageSrc)
+            .then(res => res.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast("Image downloaded!", "green");
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Download failed", "red");
+            });
+    }
+
     // Send image with compression
     function sendImageMessage(base64Image) {
         const now = new Date();
@@ -495,6 +595,26 @@
         closeEmojiPanel();
     }
 
+    // Delete functions
+    function deleteForMe(key) {
+        chatRef.child(key + '/deletedBy/' + safeUser).set(true);
+        showToast("Message deleted for you", "green");
+    }
+    function deleteForEveryone(key) {
+        chatRef.child(key).once('value', snap => {
+            if (snap.exists() && snap.val().name === currentUser) {
+                chatRef.child(key).update({
+                    isDeletedEveryone: true,
+                    type: 'text',
+                    text: 'This message was deleted'
+                });
+                showToast("Message deleted for everyone", "green");
+            } else {
+                showToast("You can only delete your own messages", "red");
+            }
+        });
+    }
+
     function loadMessages() {
         const container = document.getElementById('messages');
         container.innerHTML = '';
@@ -519,10 +639,16 @@
                 const msgDiv = document.createElement('div');
                 msgDiv.className = `msg ${isSent ? 'sent' : 'received'}`;
                 let contentHtml = '';
-                if (msg.type === 'image' && msg.image) {
-                    contentHtml = `<div class="image-message" onclick="showFullImage('${msg.image}')"><img src="${msg.image}" alt="image"></div>`;
+                let deleteButtonHtml = '';
+                if (msg.isDeletedEveryone) {
+                    contentHtml = `<span class="deleted-msg">🚫 This message was deleted</span>`;
+                } else if (msg.type === 'image' && msg.image) {
+                    if (isSent) {
+                        deleteButtonHtml = `<button class="image-delete-btn" onclick="event.stopPropagation(); showDeleteOptions('${key}')">🗑️</button>`;
+                    }
+                    contentHtml = `<div class="image-message" onclick="event.stopPropagation(); showFullImage('${msg.image}', '${key}')">${deleteButtonHtml}<img src="${msg.image}" alt="image"></div>`;
                 } else {
-                    contentHtml = msg.isDeletedEveryone ? `<span class="deleted-msg">🚫 This message was removed</span>` : (msg.text || '');
+                    contentHtml = msg.text || '';
                 }
                 const nameHtml = `<div style="font-size:0.7rem; font-weight:600; margin-bottom:4px;">👤 ${msg.name}${isSent ? ' (You)' : ''}</div>`;
                 const infoHtml = `<div class="msg-info">${msg.date} · ${msg.time}</div>`;
@@ -530,7 +656,19 @@
                 if (selectModeActive) {
                     checkboxHtml = `<input type="checkbox" class="msg-select-checkbox" data-key="${key}" onclick="event.stopPropagation(); toggleMessageSelection('${key}', this.checked)">`;
                 }
-                msgDiv.innerHTML = `<div style="position:relative">${checkboxHtml}<div id="menu-${key}" class="del-menu"><button onclick="repostMessage('${(msg.text || '').replace(/'/g, "\\'")}', '${msg.name.replace(/'/g, "\\'")}')">↩️ Repost</button><button onclick="deleteForMe('${key}')">Delete for me</button>${isSent && !msg.isDeletedEveryone ? `<button style="color:#f87171" onclick="deleteForEveryone('${key}')">Delete for everyone</button>` : ''}</div><div class="bubble" onclick="toggleMenu('${key}')">${nameHtml}${contentHtml}</div></div>${infoHtml}`;
+                let deleteMenuHtml = '';
+                if (!msg.isDeletedEveryone) {
+                    let downloadOption = '';
+                    if (msg.type === 'image' && msg.image) {
+                        downloadOption = `<button onclick="event.stopPropagation(); downloadImage('${msg.image}', 'chat_image.jpg'); this.closest('.del-menu').style.display='none';">📥 Download image</button>`;
+                    }
+                    deleteMenuHtml = `<div id="menu-${key}" class="del-menu">
+                        ${downloadOption}
+                        <button onclick="event.stopPropagation(); deleteForMe('${key}'); this.closest('.del-menu').style.display='none';">🗑️ Delete for me</button>
+                        ${isSent ? `<button onclick="event.stopPropagation(); deleteForEveryone('${key}'); this.closest('.del-menu').style.display='none';">⚠️ Delete for everyone</button>` : ''}
+                    </div>`;
+                }
+                msgDiv.innerHTML = `<div style="position:relative">${checkboxHtml}${deleteMenuHtml}<div class="bubble" onclick="toggleMenu('${key}')">${nameHtml}${contentHtml}</div></div>${infoHtml}`;
                 container.appendChild(msgDiv);
             });
             container.scrollTop = container.scrollHeight;
@@ -538,13 +676,59 @@
         });
     }
 
-    window.showFullImage = (src) => {
+    // Show delete options popup (for image delete button)
+    window.showDeleteOptions = function(key) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.bottom = '120px';
+        modal.style.left = '50%';
+        modal.style.transform = 'translateX(-50%)';
+        modal.style.background = '#1e293b';
+        modal.style.borderRadius = '24px';
+        modal.style.padding = '12px';
+        modal.style.zIndex = '3000';
+        modal.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+        modal.style.border = '1px solid var(--glass-border)';
+        modal.style.display = 'flex';
+        modal.style.gap = '10px';
+        modal.innerHTML = `
+            <button style="background:#ef4444; border:none; padding:8px 16px; border-radius:20px; color:white; cursor:pointer;" onclick="deleteForMe('${key}'); this.parentElement.remove();">Delete for me</button>
+            <button style="background:#f97316; border:none; padding:8px 16px; border-radius:20px; color:white; cursor:pointer;" onclick="deleteForEveryone('${key}'); this.parentElement.remove();">Delete for everyone</button>
+            <button style="background:#475569; border:none; padding:8px 16px; border-radius:20px; color:white; cursor:pointer;" onclick="this.parentElement.remove();">Cancel</button>
+        `;
+        document.body.appendChild(modal);
+        setTimeout(() => modal.remove(), 5000);
+    };
+
+    function toggleMenu(key) {
+        document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none');
+        const menu = document.getElementById('menu-' + key);
+        if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Updated showFullImage with download button
+    window.showFullImage = function(imageSrc, messageKey) {
         const modal = document.createElement('div');
         modal.className = 'full-image-modal';
-        modal.onclick = () => modal.remove();
         const img = document.createElement('img');
-        img.src = src;
+        img.src = imageSrc;
         modal.appendChild(img);
+        
+        const downloadDiv = document.createElement('div');
+        downloadDiv.className = 'download-btn-container';
+        const downloadBtn = document.createElement('button');
+        downloadBtn.className = 'download-btn';
+        downloadBtn.innerHTML = '⬇️ Download Image';
+        downloadBtn.onclick = (e) => {
+            e.stopPropagation();
+            downloadImage(imageSrc, 'chat_image.jpg');
+        };
+        downloadDiv.appendChild(downloadBtn);
+        modal.appendChild(downloadDiv);
+        
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
         document.body.appendChild(modal);
     };
 
@@ -609,10 +793,7 @@
         inp.addEventListener('input', handleInput);
     }
 
-    function toggleMenu(key) { document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none'); const m = document.getElementById('menu-'+key); if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
-    function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
-    function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' }); }
-    function repostMessage(text, user) { document.getElementById('inp').value = `📎 Repost from ${user}: "${text}"`; }
+    // Selection mode functions
     function toggleMultiSelectMode(forceOff) { 
         if(forceOff === true || selectModeActive) { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; loadMessages(); return; } 
         selectModeActive = true; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'flex'; document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel'; loadMessages(); 
@@ -621,7 +802,18 @@
     function updateSelectAllCheckboxState() { const cbs = document.querySelectorAll('.msg-select-checkbox'); const all = Array.from(cbs); const checked = all.filter(cb=>cb.checked).length; const selAll = document.getElementById('selectAllCheckbox'); if(selAll) { selAll.checked = all.length > 0 && checked === all.length; selAll.indeterminate = checked > 0 && checked < all.length; } }
     function toggleSelectAll() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.msg-select-checkbox').forEach(cb => { const key = cb.getAttribute('data-key'); if(key) { if(isChecked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); cb.checked = isChecked; } }); document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`; updateSelectAllCheckboxState(); }
     async function deleteSelectedForMe() { for(let key of selectedMsgKeys) await chatRef.child(key+'/deletedBy/'+safeUser).set(true); toggleMultiSelectMode(false); showToast(`🗑️ ${selectedMsgKeys.size} messages deleted for you`,'green'); }
-    async function deleteSelectedForEveryone() { for(let key of selectedMsgKeys) { const snap = await chatRef.child(key).once('value'); if(snap.val()?.name === currentUser) await chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' }); } toggleMultiSelectMode(false); showToast('⚠️ Deleted for everyone (your messages)','green'); }
+    async function deleteSelectedForEveryone() { 
+        let count = 0;
+        for(let key of selectedMsgKeys) { 
+            const snap = await chatRef.child(key).once('value');
+            if(snap.val()?.name === currentUser && !snap.val()?.isDeletedEveryone) {
+                await chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' });
+                count++;
+            }
+        }
+        toggleMultiSelectMode(false);
+        showToast(`⚠️ Deleted ${count} messages for everyone`, 'green');
+    }
     function resetSelectModeUI(keepMode) { if(!keepMode) { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; } loadMessages(); }
 
     // Emoji
