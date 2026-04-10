@@ -1,560 +1,747 @@
 <!DOCTYPE html>
-<html lang="ur">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chat Pro - Private Links</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
+    <title>Chat Pro · Voice Messages + Private Rooms</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
             --primary: #6366f1;
             --secondary: #a855f7;
-            --bg-dark: #0f172a;
-            --glass-bg: rgba(255,255,255,0.05);
-            --glass-border: rgba(255,255,255,0.1);
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --green: #22c55e;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-light: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --danger: #f87171;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
         body {
-            font-family: 'Sora','Noto Sans Arabic',sans-serif;
-            background: radial-gradient(circle at top left,#1e1b4b,#0f172a);
-            color: var(--text-main);
+            font-family: 'Sora', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #111827, #030712);
+            color: var(--text-light);
             height: 100dvh;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
             padding-top: env(safe-area-inset-top);
-            touch-action: pan-y pinch-zoom;
         }
-
-        /* HEADER */
         .top-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 14px;
-            background: rgba(15,23,42,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--glass-border);
-            backdrop-filter: blur(12px);
-            z-index: 10; flex-shrink: 0;
+            flex-shrink: 0;
+            gap: 10px;
+        }
+        .room-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
             gap: 8px;
+            flex: 1;
+            overflow-x: auto;
+            white-space: nowrap;
         }
-        .room-title { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; }
-        .room-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-        .user-chip { background: linear-gradient(135deg,var(--primary),var(--secondary)); padding: 5px 11px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .user-chip:hover { opacity: 0.85; }
-        .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: #c084fc; padding: 6px 11px; border-radius: 18px; font-size: 0.72rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
-        .icon-btn:hover { background: rgba(168,85,247,0.25); }
-        .leave-btn { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 4px 9px; border-radius: 12px; font-size: 0.68rem; cursor: pointer; flex-shrink: 0; }
-
-        /* ONLINE USERS BAR */
+        .header-right { display: flex; gap: 6px; flex-shrink: 0; }
+        .icon-btn, .user-chip {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 5px 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+        .user-chip {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .user-chip img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
         .online-bar {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 14px; overflow-x: auto;
-            background: rgba(15,23,42,0.6);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            overflow-x: auto;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
             border-bottom: 1px solid var(--glass-border);
-            scrollbar-width: none; flex-shrink: 0; min-height: 66px;
+            flex-shrink: 0;
+            min-height: 70px;
         }
-        .online-bar::-webkit-scrollbar { display: none; }
-        .online-bar-label { font-size: 0.63rem; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
-        .user-avatar { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; animation: fadeIn 0.3s ease-out; width: 50px; }
+        .exit-room-bar {
+            background: rgba(248, 113, 113, 0.15);
+            border-bottom: 1px solid rgba(248, 113, 113, 0.3);
+            padding: 8px 16px;
+            text-align: center;
+            flex-shrink: 0;
+            display: none;
+        }
+        .exit-room-bar button {
+            background: #ef4444;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            width: 100%;
+            max-width: 200px;
+            margin: 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .user-avatar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            width: 65px;
+        }
         .av-circle {
-            width: 42px; height: 42px; border-radius: 50%;
-            background: linear-gradient(135deg,var(--primary),var(--secondary));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1rem; font-weight: 700; position: relative;
-            border: 2px solid transparent; transition: border 0.2s;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
         }
-        .av-circle img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .user-avatar:hover .av-circle { border: 2px solid #c084fc; }
-        .av-circle .online-dot { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); border: 2px solid #0f172a; }
-        .av-name { font-size: 0.6rem; color: var(--text-dim); max-width: 48px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .user-avatar.me .av-circle { background: linear-gradient(135deg,#334155,#475569); }
-        .user-avatar.me .av-name { color: #6366f1; }
-        .no-online { font-size: 0.72rem; color: var(--text-dim); }
-
-        /* TYPING BAR */
+        .av-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .online-dot {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 11px;
+            height: 11px;
+            background: var(--success);
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+        }
+        .av-name { font-size: 0.6rem; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .typing-indicator {
-            background: rgba(99,102,241,0.2);
+            background: rgba(99, 102, 241, 0.2);
             border-top: 1px solid var(--glass-border);
             border-bottom: 1px solid var(--glass-border);
-            padding: 5px 14px;
+            padding: 5px 16px;
             font-size: 0.7rem;
-            color: #a78bfa;
+            color: #c4b5fd;
             white-space: nowrap;
-            overflow-x: auto;
             flex-shrink: 0;
-            backdrop-filter: blur(8px);
         }
-
-        /* MESSAGES */
-        #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 11px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        #messages::-webkit-scrollbar { display: none; }
-        .date-divider { text-align: center; margin: 14px 0 6px; }
-        .date-divider span { background: rgba(255,255,255,0.08); padding: 3px 11px; border-radius: 10px; font-size: 0.68rem; color: var(--text-dim); }
-        .msg { max-width: 82%; display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; position: relative; }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .msg { max-width: 85%; display: flex; flex-direction: column; animation: fadeSlide 0.2s ease; position: relative; }
         .sent { align-self: flex-end; align-items: flex-end; }
-        .received { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.93rem; position: relative; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid var(--glass-border); word-break: break-word; }
-        .sent .bubble { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; border-bottom-right-radius: 4px; border: none; }
-        .received .bubble { background: var(--glass-bg); border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-        .deleted-msg { font-style: italic; opacity: 0.5; font-size: 0.83rem; }
-        
-        /* DEL MENU */
-        .del-menu {
+        .received { align-self: flex-start; }
+        .bubble {
+            padding: 10px 16px;
+            border-radius: 22px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            word-break: break-word;
+            cursor: pointer;
+        }
+        .sent .bubble {
+            background: linear-gradient(135deg, var(--primary), #7c3aed);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        .received .bubble {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 5px;
+        }
+        .voice-message {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 180px;
+        }
+        .voice-play-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.1s;
+        }
+        .voice-play-btn:hover { background: rgba(255,255,255,0.4); }
+        .voice-timer {
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+        .recording-indicator {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            padding: 8px 20px;
+            border-radius: 40px;
+            z-index: 200;
+            font-weight: bold;
             display: none;
-            position: absolute;
-            bottom: 110%;
-            right: 0;
+            gap: 8px;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .recording-indicator .pulse {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+        .msg-info { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; padding: 0 6px; }
+        .selection-toolbar {
+            background: #1e293b;
+            border-bottom: 1px solid var(--glass-border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+        .input-container {
+            padding: 10px 14px 14px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            flex-shrink: 0;
+        }
+        .input-wrapper {
             background: #1e293b;
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            z-index: 200;
-            width: 130px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            padding: 4px 6px 4px 18px;
+            gap: 6px;
         }
-        .del-menu button { width: 100%; padding: 8px 10px; border: none; background: none; color: white; text-align: left; font-size: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); }
-        .del-menu button:last-child { border-bottom: none; }
-        .del-menu button:hover { background: rgba(255,255,255,0.08); }
-        
-        /* MULTI-SELECT */
-        .msg-select-checkbox { position: absolute; left: -28px; top: 12px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); z-index: 5; }
-        .sent .msg-select-checkbox { left: auto; right: -28px; }
-        .selection-toolbar {
-            background: #1e293b; border-bottom: 1px solid var(--glass-border); padding: 6px 14px;
-            display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-shrink: 0;
-            font-size: 0.75rem; flex-wrap: wrap;
+        .input-wrapper input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.95rem;
+            font-family: inherit;
+            padding: 10px 0;
         }
-        .selection-left { display: flex; align-items: center; gap: 12px; }
-        .select-all-checkbox { display: flex; align-items: center; gap: 5px; }
-        .select-all-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
-        .selection-actions button { background: rgba(255,255,255,0.1); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.7rem; }
-        .selection-actions .del-me-btn { background: rgba(248,113,113,0.2); color: #f87171; }
-        .selection-actions .del-everyone-btn { background: rgba(239,68,68,0.3); color: #ff9f9f; }
-        
-        /* INPUT */
-        .input-container { padding: 9px 14px 5px; background: rgba(15,23,42,0.5); flex-shrink: 0; }
-        .input-wrapper { background: rgba(30,41,59,0.9); border: 1px solid var(--glass-border); border-radius: 28px; display: flex; padding: 5px 5px 5px 16px; align-items: center; gap: 4px; }
-        .input-wrapper input { flex: 1; background: none; border: none; color: white; font-size: 0.93rem; font-family: inherit; padding: 8px 0; }
-        .emoji-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0 6px; }
-        .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; color: var(--bg-dark); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+        .action-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.1s;
+        }
+        .send-btn {
+            background: white;
+            color: #0f172a;
+        }
+        .mic-btn.recording {
+            background: #ef4444;
+            color: white;
+            animation: micPulse 1s infinite;
+        }
+        @keyframes micPulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         .emoji-panel {
-            position: absolute; bottom: 75px; left: 10px; right: 10px; background: #1e293b; border-radius: 24px;
-            border: 1px solid var(--glass-border); backdrop-filter: blur(20px); padding: 12px;
-            display: none; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px;
-            max-height: 200px; overflow-y: auto; z-index: 100;
+            position: absolute;
+            bottom: 85px;
+            left: 12px;
+            right: 12px;
+            background: #1e293b;
+            border-radius: 28px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            padding: 12px;
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+            gap: 10px;
+            max-height: 210px;
+            overflow-y: auto;
+            z-index: 120;
         }
         .emoji-panel.show { display: grid; }
-        .emoji-item { font-size: 1.7rem; text-align: center; padding: 6px; cursor: pointer; border-radius: 16px; }
-        .bottom-safe-bar { height: env(safe-area-inset-bottom,18px); background: #0f172a; width: 100%; flex-shrink: 0; }
-
-        /* MODAL COMMON */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .emoji-item { text-align: center; font-size: 1.7rem; cursor: pointer; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
         .modal-overlay.active { display: flex; }
-        .modal-box { background: #1e293b; border: 1px solid var(--glass-border); border-radius: 24px; padding: 20px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: popIn 0.25s ease-out; }
-        @keyframes popIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
-        .modal-box h3 { font-size: 1.1rem; margin-bottom: 16px; text-align: center; background: linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .modal-field { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 11px 15px; color: white; font-size: 0.88rem; width: 100%; margin-bottom: 12px; font-family: inherit; }
-        .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
-        .btn-primary { flex:1; padding:11px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-weight:600; cursor:pointer; }
-        .btn-cancel { flex:1; padding:11px; border:1px solid var(--glass-border); border-radius:14px; background:transparent; color:var(--text-dim); cursor:pointer; }
-        .btn-danger { background: linear-gradient(135deg,#ef4444,#b91c1c); }
-        
-        /* Profile specific */
-        .profile-pic-large { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; background: linear-gradient(135deg,var(--primary),var(--secondary)); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 3px solid #c084fc; }
-        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
-        .profile-note { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 16px; font-size: 0.8rem; color: #cbd5e1; text-align: center; margin: 10px 0; word-break: break-word; }
-        .file-input-label { background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 8px; border-radius: 40px; text-align: center; font-size: 0.7rem; cursor: pointer; margin-top: 5px; display: block; }
-        .file-input-label input { display: none; }
-        .dm-badge { background: linear-gradient(135deg,#22c55e,#16a34a); padding: 2px 8px; border-radius: 8px; font-size: 0.62rem; color: white; }
-        .room-list { max-height: 180px; overflow-y: auto; margin-bottom: 12px; }
-        .room-item { display: flex; justify-content: space-between; background: var(--glass-bg); border-radius: 12px; padding: 8px 12px; margin-bottom: 6px; cursor: pointer; }
-        .tab-btns { display: flex; gap: 8px; margin-bottom: 14px; }
-        .tab-btn { flex:1; padding: 8px; border-radius: 12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.75rem; }
-        .tab-btn.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color:white; }
-        .error-msg { color:#f87171; font-size:0.7rem; text-align:center; margin-top:5px; }
-
-        /* Link Modal special styling */
-        .link-url-container {
-            background: #0f172a;
-            border-radius: 20px;
-            padding: 12px;
-            margin: 10px 0;
-            word-break: break-all;
-            font-size: 0.75rem;
-            font-family: monospace;
+        .modal-box {
+            background: #1e293b;
             border: 1px solid var(--glass-border);
-            color: #a78bfa;
-            text-align: center;
+            border-radius: 32px;
+            padding: 22px;
+            width: 90%;
+            max-width: 380px;
         }
-        .copy-link-btn {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border: none;
+        .modal-field {
             width: 100%;
-            margin-top: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 12px;
+            margin-bottom: 12px;
+            color: white;
+            font-family: inherit;
         }
+        .profile-pic-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 3px solid #a78bfa;
+            cursor: pointer;
+            position: relative;
+        }
+        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
+        .btn-primary, .btn-cancel, .btn-danger {
+            padding: 10px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-cancel { background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); }
+        .tab-btns { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab-btn { flex:1; background: transparent; border:1px solid var(--glass-border); border-radius: 40px; padding: 8px; cursor: pointer; color: var(--text-muted); }
+        .tab-btn.active { background: var(--primary); color:white; border: none; }
+        .room-list { max-height: 140px; overflow-y: auto; margin-bottom: 12px; }
+        .room-item { background: var(--glass-bg); padding: 10px; border-radius: 18px; margin-bottom: 8px; cursor: pointer; }
+        .msg-select-checkbox { position: absolute; left: -28px; top: 12px; width: 18px; height: 18px; accent-color: var(--primary); }
+        .sent .msg-select-checkbox { left: auto; right: -28px; }
+        .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #0f172a; border-radius: 18px; width: 140px; overflow: hidden; z-index: 200; border: 1px solid var(--glass-border);}
+        .del-menu button { width: 100%; padding: 8px 12px; background: none; border: none; color: white; text-align: left; font-size: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--glass-border);}
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
-    <div class="top-header">
-        <div class="room-title" id="headerLeft"><span>💬 Group Chat</span></div>
-        <div class="header-right">
-            <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
-            <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
-            <!-- NEW: Unique Invite Link Button for owner (right corner) -->
-            <button class="icon-btn" id="myLinkBtn" onclick="showMyUniqueLink()" style="background: rgba(16,185,129,0.15); border-color: #10b981;">🔗 My Link</button>
-            <div class="user-chip" id="userChip" onclick="openMyProfileModal()">👤 پروفائل</div>
-        </div>
+<div class="top-header">
+    <div class="room-title" id="headerLeft"><span>🌍 Main Lobby · Public</span></div>
+    <div class="header-right">
+        <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
+        <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
+        <button class="icon-btn" onclick="showMyUniqueLink()">🔗 My Link</button>
+        <div class="user-chip" id="userChip" onclick="openProfileSettings()">👤 Profile</div>
     </div>
+</div>
 
-    <!-- ONLINE USERS BAR -->
-    <div class="online-bar" id="onlineBar">
-        <span class="online-bar-label">🟢 Online:</span>
-        <span class="no-online" id="noOnline">لوڈ ہو رہا ہے...</span>
+<div class="online-bar" id="onlineBar"><span>🟢 Online:</span><span class="no-online"> loading...</span></div>
+<div id="exitBar" class="exit-room-bar"><button onclick="exitCurrentRoom()">🚪 Exit current room → Main lobby</button></div>
+<div id="typingIndicator" class="typing-indicator" style="display: none;">✍️ <span id="typingUsersText"></span> typing...</div>
+<div id="messages"></div>
+<div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+    <div><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"> <label>Select all</label> <span id="selectedCount">0</span></div>
+    <div><button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button> <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete everyone</button> <button class="cancel-select" onclick="toggleMultiSelectMode(false)">Cancel</button></div>
+</div>
+
+<div class="input-container">
+    <div class="input-wrapper">
+        <input type="text" id="inp" placeholder="Type a message..." autocomplete="off">
+        <button class="action-btn emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
+        <button class="action-btn mic-btn" id="micBtn" title="Hold to record voice message">🎤</button>
+        <button class="action-btn send-btn" onclick="sendTextMessage()">↑</button>
     </div>
-    <div id="typingIndicator" class="typing-indicator" style="display: none;">✍️ <span id="typingUsersText"></span> ٹائپ کر رہا ہے...</div>
+    <div id="emojiPanel" class="emoji-panel"></div>
+</div>
+<div id="recordingIndicator" class="recording-indicator"><div class="pulse"></div> Recording... <span id="recordTimer">0:00</span></div>
 
-    <!-- MESSAGES -->
-    <div id="messages"></div>
+<!-- Modals (same as before) -->
+<div class="modal-overlay" id="roomModal"><div class="modal-box"><h3>🔐 Private Rooms</h3><div class="tab-btns"><button class="tab-btn active" onclick="switchTab('join')">Join</button><button class="tab-btn" onclick="switchTab('create')">Create</button><button class="tab-btn" onclick="switchTab('delete')">🗑️ Delete</button></div><div id="tab-join"><div id="roomListContainer" class="room-list"></div><input class="modal-field" id="joinRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="joinPassword" placeholder="Password"><div class="modal-actions" style="display:flex; gap:10px;"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="joinRoom()">Join Room</button></div></div><div id="tab-create"><input class="modal-field" id="newRoomId" placeholder="Room ID (unique)"><input class="modal-field" id="newRoomName" placeholder="Room name"><input class="modal-field" type="password" id="newRoomPass" placeholder="Password"><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="createRoom()">Create</button></div></div><div id="tab-delete"><div id="deleteRoomListContainer" class="room-list"></div><input class="modal-field" id="deleteRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="deleteRoomPass" placeholder="Password"><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-danger" onclick="deleteRoom()">Delete Room</button></div></div></div></div>
+<div class="modal-overlay" id="profileModal"><div class="modal-box"><h3>👤 Edit Profile</h3><div class="profile-pic-large" id="profilePicPreview" onclick="document.getElementById('profileImageInput').click()"><span id="profilePicPlaceholder">📸</span><div class="camera-icon">📷</div></div><input type="file" id="profileImageInput" accept="image/*" style="display:none"><input class="modal-field" id="profileNameInput" placeholder="Display name"><div class="modal-actions"><button class="btn-cancel" onclick="closeProfileModal()">Cancel</button><button class="btn-primary" onclick="updateProfile()">Save</button></div></div></div>
+<div class="modal-overlay" id="linkModal"><div class="modal-box"><h3>🔗 Your Private Invite Link</h3><div id="uniqueLinkDisplay" style="background:#0f172a; border-radius:20px; padding:12px; word-break:break-all;"></div><div class="modal-actions"><button class="btn-primary" onclick="copyUniqueLink()">📋 Copy Link</button><button class="btn-cancel" onclick="closeLinkModal()">Close</button></div></div></div>
 
-    <!-- SELECTION TOOLBAR -->
-    <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
-        <div class="selection-left">
-            <div class="select-all-checkbox"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"> <label>Select All</label></div>
-            <span id="selectedCount">0 selected</span>
-        </div>
-        <div class="selection-actions">
-            <button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button>
-            <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete for everyone</button>
-            <button class="cancel-select" onclick="toggleMultiSelectMode(false)">Cancel</button>
-        </div>
-    </div>
+<script>
+    // Firebase config (same)
+    const firebaseConfig = {
+        apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y",
+        authDomain: "public-chat-app-e75fc.firebaseapp.com",
+        databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/",
+        projectId: "public-chat-app-e75fc"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    <!-- INPUT -->
-    <div class="input-container">
-        <div class="input-wrapper">
-            <input type="text" id="inp" placeholder="پیغام لکھیں..." autocomplete="off">
-            <button class="emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
-            <button class="send-btn" onclick="send()">↑</button>
-        </div>
-        <div id="emojiPanel" class="emoji-panel"></div>
-    </div>
-    <div class="bottom-safe-bar"></div>
+    // User
+    let currentUser = localStorage.getItem('chat_user');
+    if (!currentUser || currentUser === "null") {
+        currentUser = prompt("Enter your name:") || "User_" + Math.floor(Math.random() * 999);
+        localStorage.setItem('chat_user', currentUser);
+    }
+    let safeUser = currentUser.replace(/[.#$[\]/]/g, '_');
+    let userAvatarBase64 = localStorage.getItem(`avatar_${safeUser}`) || null;
+    function updateUserChip() {
+        const chip = document.getElementById('userChip');
+        if (userAvatarBase64) chip.innerHTML = `<img src="${userAvatarBase64}"> ${currentUser}`;
+        else chip.innerHTML = `👤 ${currentUser}`;
+    }
+    updateUserChip();
 
-    <!-- DM NOTIFICATIONS -->
-    <div class="dm-request-popup" id="dmRequestPopup"></div>
+    // Global state
+    let currentRoom = 'public', currentRoomType = 'public', currentRoomDisplayName = '';
+    let chatRef = db.ref('chats');
+    let chatListener = null;
+    let selectModeActive = false, selectedMsgKeys = new Set();
+    let typingTimeout = null, currentTypingListener = null;
 
-    <!-- ROOM MODAL -->
-    <div class="modal-overlay" id="roomModal"><div class="modal-box"><h3>🔒 Private Rooms</h3><div class="tab-btns"><button class="tab-btn active" onclick="switchTab('join')">Join</button><button class="tab-btn" onclick="switchTab('create')">Create</button><button class="tab-btn" onclick="switchTab('delete')">🗑️ Delete</button></div><div id="tab-join" class="tab-content active"><div id="roomListContainer" class="room-list"></div><input class="modal-field" id="joinRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="joinPassword" placeholder="Password"><div id="joinError" class="error-msg"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="joinRoom()">Join</button></div></div><div id="tab-create" class="tab-content"><input class="modal-field" id="newRoomId" placeholder="Room ID"><input class="modal-field" id="newRoomName" placeholder="Room Name"><input class="modal-field" type="password" id="newRoomPass" placeholder="Password"><div id="createError"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="createRoom()">Create</button></div></div><div id="tab-delete" class="tab-content"><div id="deleteRoomListContainer" class="room-list"></div><input class="modal-field" id="deleteRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="deleteRoomPass" placeholder="Password"><div id="deleteError"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-danger" onclick="deleteRoom()">Delete Room</button></div></div></div></div>
+    // Voice recording variables
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordStartTime = 0;
+    let recordTimerInterval = null;
+    const micBtn = document.getElementById('micBtn');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    const recordTimerSpan = document.getElementById('recordTimer');
 
-    <!-- PROFILE MODAL (view/edit) -->
-    <div class="modal-overlay" id="profileModal"><div class="modal-box" id="profileModalContent"></div></div>
+    // Helper: show toast
+    function showToast(msg, color) {
+        const t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1e293b;border-left:5px solid ${color==='green'?'#22c55e':'#f87171'};padding:8px 20px;border-radius:40px;z-index:9999;font-size:0.8rem;`;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2800);
+    }
 
-    <!-- NEW: UNIQUE LINK MODAL (only owner sees own link) -->
-    <div class="modal-overlay" id="linkModal">
-        <div class="modal-box">
-            <h3>🔗 آپ کی ذاتی لنک (Your Unique Link)</h3>
-            <p style="font-size: 0.75rem; text-align: center; margin-bottom: 12px; color: #94a3b8;">یہ لنک صرف آپ کے لیے ہے — دوسرے نہیں دیکھ سکتے</p>
-            <div class="link-url-container" id="uniqueLinkDisplay"></div>
-            <div class="modal-actions">
-                <button class="btn-primary copy-link-btn" id="copyLinkBtn" onclick="copyUniqueLink()">📋 کاپی کریں</button>
-                <button class="btn-cancel" onclick="closeLinkModal()">بند کریں</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        firebase.initializeApp({ apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y", authDomain: "public-chat-app-e75fc.firebaseapp.com", databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/", projectId: "public-chat-app-e75fc" });
-        const db = firebase.database();
-        let currentUser = localStorage.getItem('user');
-        if (!currentUser || currentUser === "null") { currentUser = prompt("اپنا نام لکھیں:") || "User_" + Math.floor(Math.random() * 1000); localStorage.setItem('user', currentUser); }
-        const safeUser = currentUser.replace(/[.#$[\] /]/g,'_');
-        document.getElementById('userChip').innerHTML = "👤 " + currentUser;
-        
-        // Profile references
-        const profilesRef = db.ref('user_profiles');
-        let currentUserProfile = { pic: null, note: "ہیلو! میں یہاں ہوں۔" };
-        
-        // Save profile to Firebase
-        function saveProfileToDB(picBase64, noteText) {
-            let update = { name: currentUser, updatedAt: Date.now() };
-            if (picBase64 !== undefined) update.pic = picBase64;
-            if (noteText !== undefined) update.note = noteText;
-            profilesRef.child(safeUser).update(update);
-        }
-        
-        // Load profile for any user
-        async function getUserProfile(userId, userName) {
-            const snap = await profilesRef.child(userId).once('value');
-            if (snap.exists()) return snap.val();
-            return { pic: null, note: "مزاج ہے؟", name: userName };
-        }
-        
-        // Initialize current user profile
-        profilesRef.child(safeUser).once('value', snap => {
-            if (!snap.exists()) {
-                saveProfileToDB(null, currentUserProfile.note);
-            } else {
-                const data = snap.val();
-                if (data.note) currentUserProfile.note = data.note;
-                if (data.pic) currentUserProfile.pic = data.pic;
-            }
-        });
-        
-        // Open my profile edit modal
-        function openMyProfileModal() {
-            const modal = document.getElementById('profileModal');
-            const content = document.getElementById('profileModalContent');
-            content.innerHTML = `
-                <h3>📸 میرا پروفائل</h3>
-                <div style="text-align:center">
-                    <div class="profile-pic-large" id="myProfilePicPreview">
-                        ${currentUserProfile.pic ? `<img src="${currentUserProfile.pic}" alt="profile">` : `<span style="font-size:2rem">${currentUser.charAt(0).toUpperCase()}</span>`}
-                    </div>
-                    <label class="file-input-label">📷 تصویر تبدیل کریں<input type="file" id="profileImageInput" accept="image/*"></label>
-                </div>
-                <textarea id="profileNoteInput" class="modal-field" rows="2" placeholder="اپنی حالت (Status) لکھیں..." maxlength="80">${currentUserProfile.note || ''}</textarea>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeProfileModal()">Cancel</button>
-                    <button class="btn-primary" onclick="updateMyProfile()">محفوظ کریں</button>
-                </div>
-            `;
-            modal.classList.add('active');
-            const fileInput = document.getElementById('profileImageInput');
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            const size = 150;
-                            canvas.width = size; canvas.height = size;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, size, size);
-                            const base64 = canvas.toDataURL('image/jpeg', 0.6);
-                            const previewDiv = document.getElementById('myProfilePicPreview');
-                            previewDiv.innerHTML = `<img src="${base64}" alt="profile">`;
-                            currentUserProfile.pic = base64;
-                        };
-                        img.src = ev.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
+    // Request mic permission and start recording
+    async function startRecording() {
+        if (isRecording) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64Audio = reader.result; // includes data:audio/webm;base64,
+                    sendVoiceMessage(base64Audio);
+                };
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
             };
-        }
-        
-        function updateMyProfile() {
-            const newNote = document.getElementById('profileNoteInput').value.trim();
-            if (newNote) currentUserProfile.note = newNote;
-            saveProfileToDB(currentUserProfile.pic, currentUserProfile.note);
-            closeProfileModal();
-            showToast("پروفائل اپڈیٹ ہو گیا", "green");
-            refreshOnlineBar(); // force refresh
-        }
-        
-        function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
-        
-        // View other user's profile
-        async function viewUserProfile(userName, userId) {
-            const profile = await getUserProfile(userId, userName);
-            const picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span style="font-size:2rem">${userName.charAt(0).toUpperCase()}</span>`;
-            const modal = document.getElementById('profileModal');
-            document.getElementById('profileModalContent').innerHTML = `
-                <h3>👤 ${userName}</h3>
-                <div style="text-align:center">
-                    <div class="profile-pic-large">${picHtml}</div>
-                    <div class="profile-note">📝 "${profile.note || 'کوئی نوٹ نہیں'}"</div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-primary" onclick="sendDmFromProfile('${userName.replace(/'/g, "\\'")}')">💬 پیغام بھیجیں</button>
-                    <button class="btn-cancel" onclick="closeProfileModal()">بند کریں</button>
-                </div>
-            `;
-            modal.classList.add('active');
-        }
-        
-        function sendDmFromProfile(targetUser) { closeProfileModal(); sendDmRequest(targetUser); }
-        
-        // Online bar with profile pictures
-        let onlineUsersListener = null;
-        function refreshOnlineBar() {
-            if (onlineUsersListener) db.ref('presence').off('value', onlineUsersListener);
-            onlineUsersListener = db.ref('presence').on('value', async (snap) => {
-                const bar = document.getElementById('onlineBar');
-                bar.innerHTML = '<span class="online-bar-label">🟢 Online:</span>';
-                if (!snap.exists()) { bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>'; return; }
-                let usersList = [];
-                const now = Date.now();
-                snap.forEach(child => { const u = child.val(); if (u && u.name && u.t && (now - u.t) < 60000) usersList.push({ name: u.name, id: child.key }); });
-                for (let u of usersList) {
-                    const profile = await getUserProfile(u.id, u.name);
-                    const isMe = u.name === currentUser;
-                    const av = document.createElement('div');
-                    av.className = 'user-avatar' + (isMe ? ' me' : '');
-                    av.title = isMe ? 'آپ کا پروفائل' : `${u.name} کی پروفائل دیکھیں`;
-                    let picHtml = '';
-                    if (profile.pic) picHtml = `<img src="${profile.pic}" alt="pic">`;
-                    else picHtml = `<span>${u.name.charAt(0).toUpperCase()}</span>`;
-                    av.innerHTML = `<div class="av-circle">${picHtml}<div class="online-dot"></div></div><div class="av-name">${isMe ? 'You' : u.name}</div>`;
-                    if (!isMe) av.onclick = () => viewUserProfile(u.name, u.id);
-                    else av.onclick = () => openMyProfileModal();
-                    bar.appendChild(av);
+            mediaRecorder.start(100);
+            isRecording = true;
+            recordStartTime = Date.now();
+            recordingIndicator.style.display = 'flex';
+            micBtn.classList.add('recording');
+            recordTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                recordTimerSpan.innerText = `${mins}:${secs.toString().padStart(2,'0')}`;
+                if (elapsed >= 60) { // max 60 seconds
+                    stopRecording();
                 }
-                if (usersList.length === 0) bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>';
-            });
+            }, 1000);
+        } catch (err) {
+            showToast("Microphone access denied or not available", "red");
+            console.error(err);
         }
-        
-        // ========== EXISTING CHAT LOGIC ==========
-        let currentRoom = 'public';
-        let chatRef = db.ref('chats');
-        let chatListener = null;
-        let selectModeActive = false;
-        let selectedMsgKeys = new Set();
-        let typingTimeout = null, currentTypingListener = null;
-        
-        function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
-            if (chatListener) chatRef.off('value', chatListener);
-            if (currentTypingListener) currentTypingListener();
+    }
+
+    function stopRecording() {
+        if (!isRecording || !mediaRecorder) return;
+        mediaRecorder.stop();
+        isRecording = false;
+        if (recordTimerInterval) clearInterval(recordTimerInterval);
+        recordingIndicator.style.display = 'none';
+        micBtn.classList.remove('recording');
+    }
+
+    // Send voice message
+    async function sendVoiceMessage(base64Audio) {
+        if (!base64Audio) return;
+        const now = new Date();
+        const message = {
+            name: currentUser,
+            type: 'voice',
+            audio: base64Audio, // base64 string
+            duration: Math.floor((Date.now() - recordStartTime) / 1000),
+            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: now.toLocaleDateString('en-US'),
+            timestamp: Date.now()
+        };
+        await chatRef.push(message);
+        // Reset recording vars
+        audioChunks = [];
+        recordStartTime = 0;
+    }
+
+    // Send text message (original)
+    function sendTextMessage() {
+        const inp = document.getElementById('inp');
+        const text = inp.value.trim();
+        if (!text) return;
+        const now = new Date();
+        chatRef.push({
+            name: currentUser,
+            type: 'text',
+            text: text,
+            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: now.toLocaleDateString('en-US'),
+            timestamp: Date.now()
+        });
+        inp.value = '';
+        if (typingTimeout) clearTimeout(typingTimeout);
+        db.ref(`typing_status/${currentRoom}/${safeUser}`).remove();
+        closeEmojiPanel();
+    }
+
+    // Modified loadMessages to handle voice messages
+    function loadMessages() {
+        const container = document.getElementById('messages');
+        container.innerHTML = '';
+        let lastDate = '';
+        if (chatListener) chatRef.off('value', chatListener);
+        chatListener = chatRef.orderByChild('timestamp').on('value', (snap) => {
+            container.innerHTML = '';
+            lastDate = '';
+            snap.forEach(child => {
+                const msg = child.val();
+                const key = child.key;
+                if (msg.deletedBy && msg.deletedBy[safeUser]) return;
+                if (msg.date && msg.date !== lastDate) {
+                    const dateDiv = document.createElement('div');
+                    dateDiv.style.textAlign = 'center';
+                    dateDiv.style.margin = '8px 0';
+                    dateDiv.innerHTML = `<span style="background:rgba(255,255,255,0.08); padding:4px 12px; border-radius:40px; font-size:0.7rem;">📅 ${msg.date}</span>`;
+                    container.appendChild(dateDiv);
+                    lastDate = msg.date;
+                }
+                const isSent = (msg.name === currentUser);
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `msg ${isSent ? 'sent' : 'received'}`;
+                let contentHtml = '';
+                if (msg.type === 'voice' && msg.audio) {
+                    // Voice message bubble
+                    const duration = msg.duration || 0;
+                    const minutes = Math.floor(duration / 60);
+                    const seconds = duration % 60;
+                    const durationText = `${minutes}:${seconds.toString().padStart(2,'0')}`;
+                    const audioId = `audio_${key}`;
+                    contentHtml = `<div class="voice-message">
+                        <button class="voice-play-btn" onclick="toggleVoicePlay('${audioId}', this)">▶️</button>
+                        <audio id="${audioId}" src="${msg.audio}" style="display:none"></audio>
+                        <span class="voice-timer">${durationText}</span>
+                    </div>`;
+                } else {
+                    contentHtml = msg.isDeletedEveryone ? `<span class="deleted-msg">🚫 This message was removed</span>` : (msg.text || '');
+                }
+                const nameHtml = `<div style="font-size:0.7rem; font-weight:600; margin-bottom:4px;">👤 ${msg.name}${isSent ? ' (You)' : ''}</div>`;
+                const infoHtml = `<div class="msg-info">${msg.date} · ${msg.time}</div>`;
+                let checkboxHtml = '';
+                if (selectModeActive) {
+                    checkboxHtml = `<input type="checkbox" class="msg-select-checkbox" data-key="${key}" onclick="event.stopPropagation(); toggleMessageSelection('${key}', this.checked)">`;
+                }
+                msgDiv.innerHTML = `<div style="position:relative">${checkboxHtml}<div id="menu-${key}" class="del-menu"><button onclick="repostMessage('${(msg.text || '').replace(/'/g, "\\'")}', '${msg.name.replace(/'/g, "\\'")}')">↩️ Repost</button><button onclick="deleteForMe('${key}')">Delete for me</button>${isSent && !msg.isDeletedEveryone ? `<button style="color:#f87171" onclick="deleteForEveryone('${key}')">Delete for everyone</button>` : ''}</div><div class="bubble" onclick="toggleMenu('${key}')">${nameHtml}${contentHtml}</div></div>${infoHtml}`;
+                container.appendChild(msgDiv);
+            });
+            container.scrollTop = container.scrollHeight;
+            updateSelectAllCheckboxState();
+        });
+    }
+
+    window.toggleVoicePlay = function(audioId, btn) {
+        const audio = document.getElementById(audioId);
+        if (!audio) return;
+        if (audio.paused) {
+            // Pause any other playing audio
+            document.querySelectorAll('audio').forEach(a => { if (!a.paused) a.pause(); });
+            audio.play();
+            btn.textContent = '⏸️';
+            audio.onended = () => { btn.textContent = '▶️'; };
+        } else {
+            audio.pause();
+            btn.textContent = '▶️';
+        }
+    };
+
+    // Other functions (exit, switchRoom, etc.) same as before with minor tweaks
+    window.exitCurrentRoom = function() {
+        if (currentRoomType === 'private') {
+            db.ref(`private_rooms/${currentRoom}/members/${safeUser}`).remove();
+            showToast(`🔓 Left private room "${currentRoomDisplayName}"`, "green");
+        } else if (currentRoomType === 'dm') {
+            showToast(`💬 Left DM with ${currentRoomDisplayName}`, "green");
+        } else { showToast("✨ Already in main lobby", "green"); return; }
+        switchRoom('public', '', false, false, null);
+    };
+    function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
+        if (chatListener) chatRef.off('value', chatListener);
+        if (currentTypingListener) currentTypingListener();
+        if (isDm) {
+            currentRoomType = 'dm';
+            currentRoomDisplayName = dmWith;
             currentRoom = roomId;
-            const hl = document.getElementById('headerLeft');
-            if (isDm) { chatRef = db.ref('dm_chats/' + roomId + '/messages'); hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`; }
-            else if (isPrivate) { chatRef = db.ref('private_rooms/' + roomId + '/messages'); hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`; }
-            else { chatRef = db.ref('chats'); hl.innerHTML = `<span>💬 Group Chat</span>`; }
-            resetSelectModeUI(false);
-            loadMessages();
-            setupTypingForRoom(roomId);
+            chatRef = db.ref('dm_chats/' + roomId + '/messages');
+        } else if (isPrivate) {
+            currentRoomType = 'private';
+            currentRoomDisplayName = roomName;
+            currentRoom = roomId;
+            chatRef = db.ref('private_rooms/' + roomId + '/messages');
+            db.ref(`private_rooms/${roomId}/members/${safeUser}`).set(true);
+        } else {
+            currentRoomType = 'public';
+            currentRoomDisplayName = '';
+            currentRoom = 'public';
+            chatRef = db.ref('chats');
         }
-        function leaveRoom() { switchRoom('public','',false,false,null); }
-        
-        function setupTypingForRoom(roomId) {
-            if (currentTypingListener) currentTypingListener();
-            const typingQuery = db.ref(`typing_status/${roomId}`);
-            const listener = typingQuery.on('value', snap => {
-                const div = document.getElementById('typingIndicator');
-                if (!snap.exists()) { div.style.display = 'none'; return; }
-                const typingUsers = [];
-                snap.forEach(child => { const val = child.val(); if (val === true && child.key !== safeUser) typingUsers.push(child.key); else if (val && val.name && val.name !== currentUser && val.active) typingUsers.push(val.name); });
-                if (typingUsers.length === 0) div.style.display = 'none';
-                else { document.getElementById('typingUsersText').innerText = typingUsers.slice(0,3).join(', ') + (typingUsers.length>3 ? '...' : ''); div.style.display = 'block'; }
-            });
-            currentTypingListener = () => typingQuery.off('value', listener);
-            const inputElem = document.getElementById('inp');
-            const updateTyping = (isTyping) => { const ref = db.ref(`typing_status/${roomId}/${safeUser}`); if (isTyping) { ref.set({ name: currentUser, active: true }); ref.onDisconnect().remove(); } else ref.remove(); };
-            const handleInput = () => { updateTyping(true); if (typingTimeout) clearTimeout(typingTimeout); typingTimeout = setTimeout(() => updateTyping(false), 1200); };
-            inputElem.removeEventListener('input', handleInput);
-            inputElem.addEventListener('input', handleInput);
-        }
-        
-        function loadMessages() {
-            const box = document.getElementById('messages');
-            box.innerHTML = ''; let lastDate = '';
-            chatListener = chatRef.orderByChild('timestamp').on('value', snap => {
-                box.innerHTML = ''; lastDate = '';
-                snap.forEach(child => {
-                    const d = child.val(); const key = child.key;
-                    if (d.deletedBy && d.deletedBy[safeUser]) return;
-                    if (d.date && d.date !== lastDate) { const dd = document.createElement('div'); dd.className = 'date-divider'; dd.innerHTML = `<span>📅 ${d.date}</span>`; box.appendChild(dd); lastDate = d.date; }
-                    const isSent = (d.name === currentUser);
-                    const div = document.createElement('div'); div.className = 'msg ' + (isSent ? 'sent' : 'received');
-                    if (selectModeActive) div.classList.add('select-mode');
-                    const content = d.isDeletedEveryone ? `<span class="deleted-msg">🚫 یہ میسج ڈیلیٹ کر دیا گیا</span>` : (d.text || '');
-                    const nameHtml = `<div style="font-size:0.7rem; font-weight:700; margin-bottom:4px; color:${isSent ? '#c7d2fe' : '#d8b4fe'};">👤 ${d.name}${isSent ? ' (You)' : ''}</div>`;
-                    const info = `<span>📅 ${d.date}</span><span> · </span><span>${d.time}</span>`;
-                    let checkboxHtml = '';
-                    if (selectModeActive) checkboxHtml = `<input type="checkbox" class="msg-select-checkbox" data-key="${key}" onclick="event.stopPropagation(); toggleMessageSelection('${key}', this.checked)">`;
-                    div.innerHTML = `<div style="position:relative">${checkboxHtml}<div id="menu-${key}" class="del-menu"><button onclick="repostMessage('${(d.text||'').replace(/'/g, "\\'")}', '${d.name.replace(/'/g, "\\'")}')">↩️ Repost</button><button onclick="deleteForMe('${key}')">Delete for me</button>${isSent && !d.isDeletedEveryone ? `<button style="color:#f87171" onclick="deleteForEveryone('${key}')">Delete for everyone</button>` : ''}</div><div class="bubble" onclick="toggleMenu('${key}')">${nameHtml}${content}</div></div><div class="msg-info">${info}</div>`;
-                    box.appendChild(div);
-                });
-                box.scrollTop = box.scrollHeight;
-                updateSelectAllCheckboxState();
-            });
-        }
-        
-        function repostMessage(text, user) { document.getElementById('inp').value = `📎 Repost from ${user}: "${text}"`; closeEmojiPanel(); }
-        function toggleMenu(key) { document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none'); const m = document.getElementById('menu-'+key); if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
-        function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
-        function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); }
-        function send() { const inp = document.getElementById('inp'); const text = inp.value.trim(); if(!text) return; const now = new Date(); chatRef.push({ name: currentUser, text, time: now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: now.toLocaleDateString('en-GB'), timestamp: Date.now() }); inp.value = ''; if(typingTimeout) clearTimeout(typingTimeout); db.ref(`typing_status/${currentRoom}/${safeUser}`).remove(); closeEmojiPanel(); }
-        
-        // Multi-select functions
-        function toggleMultiSelectMode(forceOff) { if(forceOff === true || selectModeActive) { resetSelectModeUI(false); return; } selectModeActive = true; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'flex'; document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel'; loadMessages(); }
-        function resetSelectModeUI() { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; loadMessages(); }
-        function toggleMessageSelection(key, checked) { if(checked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); updateSelectedCount(); updateSelectAllCheckboxState(); }
-        function updateSelectedCount() { document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`; }
-        function updateSelectAllCheckboxState() { const cbs = document.querySelectorAll('.msg-select-checkbox'); const all = Array.from(cbs); const checked = all.filter(cb=>cb.checked).length; const selAll = document.getElementById('selectAllCheckbox'); if(selAll) { selAll.checked = all.length > 0 && checked === all.length; selAll.indeterminate = checked > 0 && checked < all.length; } }
-        function toggleSelectAll() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.msg-select-checkbox').forEach(cb => { const key = cb.getAttribute('data-key'); if(key) { if(isChecked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); cb.checked = isChecked; } }); updateSelectedCount(); updateSelectAllCheckboxState(); }
-        async function deleteSelectedForMe() { for(let key of selectedMsgKeys) await chatRef.child(key+'/deletedBy/'+safeUser).set(true); resetSelectModeUI(); showToast(`${selectedMsgKeys.size} messages deleted for you`,'green'); }
-        async function deleteSelectedForEveryone() { for(let key of selectedMsgKeys) { const snap = await chatRef.child(key).once('value'); if(snap.val()?.name === currentUser) await chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); } resetSelectModeUI(); showToast('Deleted for everyone (your msgs)','green'); }
-        
-        // Emoji
-        const commonEmojis = ["😀","😂","😍","🥰","😎","🤣","😊","❤️","👍","🔥","🎉","✨","🌟","💯","✅","💬","🔒","📌","📍","💡","🎈"];
-        function toggleEmojiPanel() { const p = document.getElementById('emojiPanel'); if(p.classList.contains('show')) p.classList.remove('show'); else { if(p.children.length===0) commonEmojis.forEach(e=>{ const span=document.createElement('span'); span.className='emoji-item'; span.textContent=e; span.onclick=()=>{ document.getElementById('inp').value+=e; p.classList.remove('show'); }; p.appendChild(span); }); p.classList.add('show'); } }
-        function closeEmojiPanel() { document.getElementById('emojiPanel').classList.remove('show'); }
-        
-        // DM and rooms (abbreviated but functional)
-        function getDmRoomId(a,b) { return [a.replace(/[.#$[\] /]/g,'_'),b.replace(/[.#$[\] /]/g,'_')].sort().join('__dm__'); }
-        function sendDmRequest(target) { if(target===currentUser) return showToast("خود سے DM نہیں",'red'); const targetSafe=target.replace(/[.#$[\] /]/g,'_'); const reqRef=db.ref('dm_requests/'+targetSafe).push({ from:currentUser, fromSafe:safeUser, status:'pending', t:Date.now() }); showToast(`Request sent to ${target}`,'green'); reqRef.on('value', snap=>{ if(snap.exists() && snap.val().status==='accepted'){ reqRef.off(); const roomId=getDmRoomId(currentUser,target); switchRoom(roomId,target,false,true,target); showToast(`${target} نے accept کر لیا!`,'green'); } }); setTimeout(()=>reqRef.off(), 60000); }
-        db.ref('dm_requests/'+safeUser).on('child_added', snap=>{ const data=snap.val(); if(data?.status==='pending') showDmNotif(data.from, snap.key); });
-        function showDmNotif(from,key){ const pop=document.getElementById('dmRequestPopup'); const n=document.createElement('div'); n.className='dm-notif'; n.innerHTML=`<div><strong>${from}</strong> آپ کو DM کرنا چاہتا ہے</div><div style="display:flex;gap:8px;margin-top:6px"><button class="accept-btn" onclick="respondDm('${key}','${from}','accepted')">Accept</button><button class="decline-btn" onclick="respondDm('${key}','${from}','declined')">Decline</button></div>`; pop.appendChild(n); setTimeout(()=>n.remove(),20000); }
-        function respondDm(key,from,status){ db.ref(`dm_requests/${safeUser}/${key}`).update({status}).then(()=>{ if(status==='accepted'){ const roomId=getDmRoomId(currentUser,from); switchRoom(roomId,from,false,true,from); } }); document.querySelectorAll('.dm-notif').forEach(el=>el.remove()); }
-        function openRoomModal(){ document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
-        function closeRoomModal(){ document.getElementById('roomModal').classList.remove('active'); }
-        function loadRoomList(){ db.ref('private_rooms').once('value', snap=>{ const c=document.getElementById('roomListContainer'); c.innerHTML=''; snap.forEach(ch=>{ const rid=ch.key; const d=ch.val(); const div=document.createElement('div'); div.className='room-item'; div.innerHTML=`<span>🔒 ${d.name||rid}</span><span class="rbadge">Private</span>`; div.onclick=()=>{ document.getElementById('joinRoomId').value=rid; document.getElementById('joinPassword').focus(); }; c.appendChild(div); }); }); }
-        function createRoom(){ const rid=document.getElementById('newRoomId').value.trim(); const name=document.getElementById('newRoomName').value.trim(); const pass=document.getElementById('newRoomPass').value.trim(); if(!rid||!name||!pass) return; db.ref('private_rooms/'+rid).set({ name, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser }).then(()=>{ closeRoomModal(); switchRoom(rid,name,true,false,null); }); }
-        function joinRoom(){ const rid=document.getElementById('joinRoomId').value.trim(); const pass=document.getElementById('joinPassword').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ closeRoomModal(); switchRoom(rid,snap.val().name,true,false,null); } else showToast('غلط room ID یا password','red'); }); }
-        function deleteRoom(){ const rid=document.getElementById('deleteRoomId').value.trim(); const pass=document.getElementById('deleteRoomPass').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ snap.ref.remove(); if(currentRoom===rid) switchRoom('public','',false,false,null); closeRoomModal(); showToast('Room delete','red'); } }); }
-        function showToast(msg,col){ const t=document.createElement('div'); t.textContent=msg; t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid ${col==='green'?'#22c55e':'#f87171'};color:${col==='green'?'#22c55e':'#f87171'};padding:8px 18px;border-radius:40px;z-index:9999;font-size:0.8rem`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
-
-        // ---------- NEW: UNIQUE LINK FOR OWNER (right corner feature) ----------
-        function getMyUniqueLink() {
-            // Generate a shareable link that contains the current user's name as reference
-            const baseUrl = window.location.href.split('?')[0].split('#')[0];
-            const inviteParam = `invite=${encodeURIComponent(currentUser)}`;
-            return `${baseUrl}?${inviteParam}`;
-        }
-
-        function showMyUniqueLink() {
-            const link = getMyUniqueLink();
-            const displayDiv = document.getElementById('uniqueLinkDisplay');
-            displayDiv.innerHTML = `<span style="word-break:break-all;">🔗 ${link}</span><br><small style="color:#94a3b8;">اس لنک کو شیئر کریں — کوئی بھی اسے کھول سکتا ہے، لیکن آپ کی شناخت آپ کے پاس ہے</small>`;
-            document.getElementById('linkModal').classList.add('active');
-        }
-
-        function copyUniqueLink() {
-            const link = getMyUniqueLink();
-            navigator.clipboard.writeText(link).then(() => {
-                showToast("✅ لنک کاپی ہو گیا! اب آپ اسے کہیں بھی شیئر کر سکتے ہیں", "green");
-            }).catch(() => {
-                showToast("کاپی نہیں ہو سکا، دستی طور پر کریں", "red");
-            });
-        }
-
-        function closeLinkModal() {
-            document.getElementById('linkModal').classList.remove('active');
-        }
-        // ----------------------------------------------------------------
-
-        // Init
-        refreshOnlineBar();
+        document.getElementById('headerLeft').innerHTML = currentRoomType === 'public' ? '<span>🌍 Main Lobby · Public</span>' : `<span>${currentRoomType === 'private' ? '🔒' : '💬'} ${currentRoomDisplayName}</span>`;
+        const exitBar = document.getElementById('exitBar');
+        exitBar.style.display = (currentRoomType !== 'public') ? 'block' : 'none';
+        resetSelectModeUI(false);
         loadMessages();
-        document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
-        window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(e.target===document.getElementById('linkModal')) closeLinkModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
-        setupTypingForRoom('public');
-        const presRef = db.ref('presence/' + safeUser);
-        presRef.set({ name: currentUser, online: true, t: Date.now() });
-        presRef.onDisconnect().remove();
-        setInterval(()=>{ presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
-    </script>
+        setupTypingForRoom(currentRoom);
+    }
+    function setupTypingForRoom(roomKey) { /* same as before */ 
+        if (currentTypingListener) currentTypingListener();
+        const typingPath = db.ref(`typing_status/${roomKey}`);
+        const listener = typingPath.on('value', snap => {
+            const typingDiv = document.getElementById('typingIndicator');
+            if (!snap.exists()) { typingDiv.style.display = 'none'; return; }
+            const users = [];
+            snap.forEach(ch => {
+                const val = ch.val();
+                if (val === true && ch.key !== safeUser) users.push(ch.key);
+                else if (val && val.name && val.name !== currentUser && val.active) users.push(val.name);
+            });
+            if (users.length === 0) typingDiv.style.display = 'none';
+            else { document.getElementById('typingUsersText').innerText = users.slice(0,3).join(', ') + (users.length>3 ? '...' : ''); typingDiv.style.display = 'block'; }
+        });
+        currentTypingListener = () => typingPath.off('value', listener);
+        const inp = document.getElementById('inp');
+        const updateTyping = (isTyping) => { const ref = db.ref(`typing_status/${roomKey}/${safeUser}`); if (isTyping) { ref.set({ name: currentUser, active: true }); ref.onDisconnect().remove(); } else ref.remove(); };
+        const handleInput = () => { updateTyping(true); if (typingTimeout) clearTimeout(typingTimeout); typingTimeout = setTimeout(() => updateTyping(false), 1200); };
+        inp.removeEventListener('input', handleInput);
+        inp.addEventListener('input', handleInput);
+    }
+    function toggleMenu(key) { document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none'); const m = document.getElementById('menu-'+key); if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
+    function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
+    function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' }); }
+    function repostMessage(text, user) { document.getElementById('inp').value = `📎 Repost from ${user}: "${text}"`; }
+    function toggleMultiSelectMode(forceOff) { 
+        if(forceOff === true || selectModeActive) { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; loadMessages(); return; } 
+        selectModeActive = true; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'flex'; document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel'; loadMessages(); 
+    }
+    function toggleMessageSelection(key, checked) { if(checked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`; updateSelectAllCheckboxState(); }
+    function updateSelectAllCheckboxState() { const cbs = document.querySelectorAll('.msg-select-checkbox'); const all = Array.from(cbs); const checked = all.filter(cb=>cb.checked).length; const selAll = document.getElementById('selectAllCheckbox'); if(selAll) { selAll.checked = all.length > 0 && checked === all.length; selAll.indeterminate = checked > 0 && checked < all.length; } }
+    function toggleSelectAll() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.msg-select-checkbox').forEach(cb => { const key = cb.getAttribute('data-key'); if(key) { if(isChecked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); cb.checked = isChecked; } }); document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`; updateSelectAllCheckboxState(); }
+    async function deleteSelectedForMe() { for(let key of selectedMsgKeys) await chatRef.child(key+'/deletedBy/'+safeUser).set(true); toggleMultiSelectMode(false); showToast(`🗑️ ${selectedMsgKeys.size} messages deleted for you`,'green'); }
+    async function deleteSelectedForEveryone() { for(let key of selectedMsgKeys) { const snap = await chatRef.child(key).once('value'); if(snap.val()?.name === currentUser) await chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' }); } toggleMultiSelectMode(false); showToast('⚠️ Deleted for everyone (your messages)','green'); }
+    function resetSelectModeUI(keepMode) { if(!keepMode) { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; } loadMessages(); }
+
+    // Emoji
+    const emojis = ["😀","😂","😍","🥰","😎","🤣","😊","❤️","👍","🔥","🎉","✨","🌟","💯","✅","💬","🔒","📌"];
+    function toggleEmojiPanel() { const panel = document.getElementById('emojiPanel'); if(panel.classList.contains('show')) panel.classList.remove('show'); else { if(panel.children.length===0) emojis.forEach(e=>{ const span=document.createElement('span'); span.className='emoji-item'; span.textContent=e; span.onclick=()=>{ document.getElementById('inp').value+=e; panel.classList.remove('show'); }; panel.appendChild(span); }); panel.classList.add('show'); } }
+    function closeEmojiPanel() { document.getElementById('emojiPanel').classList.remove('show'); }
+
+    // Profile & image upload (same as before, abbreviated)
+    function openProfileSettings() { document.getElementById('profileNameInput').value = currentUser; const preview = document.getElementById('profilePicPreview'); if (userAvatarBase64) preview.innerHTML = `<img src="${userAvatarBase64}"><div class="camera-icon">📷</div>`; else preview.innerHTML = `<span style="font-size:2.5rem;">📸</span><div class="camera-icon">📷</div>`; document.getElementById('profileModal').classList.add('active'); }
+    function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
+    document.getElementById('profileImageInput').addEventListener('change', function(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(ev) { const img = new Image(); img.onload = function() { const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); let w=img.width, h=img.height; const max=150; if(w>h) { if(w>max) h*=max/w; w=max; } else { if(h>max) w*=max/h; h=max; } canvas.width=w; canvas.height=h; ctx.drawImage(img,0,0,w,h); const base64 = canvas.toDataURL('image/jpeg',0.7); userAvatarBase64 = base64; localStorage.setItem(`avatar_${safeUser}`, base64); document.getElementById('profilePicPreview').innerHTML = `<img src="${base64}"><div class="camera-icon">📷</div>`; db.ref(`user_profiles/${safeUser}/avatar`).set(base64); updateUserChip(); refreshOnlineBar(); }; img.src = ev.target.result; }; reader.readAsDataURL(file); });
+    async function updateProfile() { const newName = document.getElementById('profileNameInput').value.trim(); if(!newName) return; if(userAvatarBase64) await db.ref(`user_profiles/${safeUser}/avatar`).set(userAvatarBase64); if(newName !== currentUser) { const oldSafe = safeUser; currentUser = newName; safeUser = currentUser.replace(/[.#$[\]/]/g, '_'); localStorage.setItem('chat_user', currentUser); db.ref('presence/' + oldSafe).remove(); db.ref('presence/' + safeUser).set({ name: currentUser, online: true, t: Date.now() }); if(userAvatarBase64) localStorage.setItem(`avatar_${safeUser}`, userAvatarBase64); showToast(`Name changed to ${currentUser}`,'green'); } updateUserChip(); closeProfileModal(); refreshOnlineBar(); }
+    async function refreshOnlineBar() { db.ref('presence').on('value', async (snap) => { const bar = document.getElementById('onlineBar'); bar.innerHTML = '<span>🟢 Online:</span>'; let hasAny=false; const now=Date.now(); const users=[]; snap.forEach(c=>{ const u=c.val(); if(u && u.name && (now-u.t)<60000) users.push({name:u.name, id:c.key}); }); for(let u of users){ hasAny=true; const avatar=await getUserAvatar(u.id); const avatarImg = avatar ? `<img src="${avatar}">` : `<span>${u.name.charAt(0)}</span>`; const div=document.createElement('div'); div.className='user-avatar'; div.onclick=()=>showToast(`👤 ${u.name}`,'green'); div.innerHTML=`<div class="av-circle">${avatarImg}<div class="online-dot"></div></div><div class="av-name">${u.name===currentUser?'You':u.name}</div>`; bar.appendChild(div); } if(!hasAny) bar.innerHTML+='<span> no one online</span>'; }); }
+    async function getUserAvatar(uid) { const snap = await db.ref(`user_profiles/${uid}/avatar`).once('value'); return snap.val(); }
+
+    // Private rooms & DM (same as original, just referencing)
+    function openRoomModal() { document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
+    function closeRoomModal() { document.getElementById('roomModal').classList.remove('active'); }
+    function loadRoomList() { db.ref('private_rooms').once('value', snap=>{ const c=document.getElementById('roomListContainer'); c.innerHTML=''; snap.forEach(ch=>{ const rid=ch.key; const d=ch.val(); const div=document.createElement('div'); div.className='room-item'; div.innerHTML=`🔒 ${d.name||rid}`; div.onclick=()=>{ document.getElementById('joinRoomId').value=rid; }; c.appendChild(div); }); }); }
+    async function createRoom() { const rid=document.getElementById('newRoomId').value.trim(), name=document.getElementById('newRoomName').value.trim(), pass=document.getElementById('newRoomPass').value.trim(); if(!rid||!name||!pass) return showToast('All fields required','red'); await db.ref('private_rooms/'+rid).set({ name, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser }); closeRoomModal(); switchRoom(rid,name,true,false,null); showToast(`✅ Room "${name}" created`,'green'); }
+    async function joinRoom() { const rid=document.getElementById('joinRoomId').value.trim(), pass=document.getElementById('joinPassword').value.trim(); const snap=await db.ref('private_rooms/'+rid).once('value'); if(!snap.exists()) return showToast('Room not found','red'); const member=await db.ref(`private_rooms/${rid}/members/${safeUser}`).once('value'); if(member.exists() || snap.val().passwordHash===btoa(pass+'_fcpro')) { closeRoomModal(); switchRoom(rid, snap.val().name, true, false, null); } else showToast('Wrong password','red'); }
+    async function deleteRoom() { const rid=document.getElementById('deleteRoomId').value.trim(), pass=document.getElementById('deleteRoomPass').value.trim(); const snap=await db.ref('private_rooms/'+rid).once('value'); if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')) { await snap.ref.remove(); if(currentRoom===rid) exitCurrentRoom(); closeRoomModal(); showToast('Room deleted','red'); } else showToast('Invalid','red'); }
+    function switchTab(tab) { document.querySelectorAll('#roomModal .tab-content').forEach(el=>el.style.display='none'); document.getElementById(`tab-${tab}`).style.display='block'; document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active')); event.target.classList.add('active'); }
+    document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none'); document.getElementById('tab-join').style.display='block';
+    function getDmRoomId(a,b) { return [a.replace(/[.#$[\]/]/g,'_'),b.replace(/[.#$[\]/]/g,'_')].sort().join('__dm__'); }
+    function sendDmRequest(target) { if(target===currentUser) return; const reqRef=db.ref('dm_requests/'+target.replace(/[.#$[\]/]/g,'_')).push({ from:currentUser, fromSafe:safeUser, status:'pending', t:Date.now() }); showToast(`📨 Request sent to ${target}`,'green'); reqRef.on('value', snap=>{ if(snap.exists() && snap.val().status==='accepted'){ reqRef.off(); const roomId=getDmRoomId(currentUser,target); switchRoom(roomId,target,false,true,target); showToast(`💬 DM with ${target}`,'green'); } }); setTimeout(()=>reqRef.off(),60000); }
+    db.ref('dm_requests/'+safeUser).on('child_added', snap=>{ const data=snap.val(); if(data?.status==='pending') showDmNotif(data.from, snap.key); });
+    function showDmNotif(from,key){ const banner=document.createElement('div'); banner.className='invite-banner'; banner.innerHTML=`<div><strong>${from}</strong> wants to DM you</div><div><button onclick="respondDm('${key}','${from}','accepted')">Accept</button><button onclick="respondDm('${key}','${from}','declined')">Decline</button></div>`; document.body.appendChild(banner); setTimeout(()=>banner.remove(),20000); }
+    window.respondDm = function(key,from,status){ db.ref(`dm_requests/${safeUser}/${key}`).update({status}).then(()=>{ if(status==='accepted'){ const roomId=getDmRoomId(currentUser,from); switchRoom(roomId,from,false,true,from); } }); document.querySelectorAll('.invite-banner').forEach(el=>el.remove()); };
+    function showMyUniqueLink() { const link = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(currentUser)}`; document.getElementById('uniqueLinkDisplay').innerHTML = `🔗 ${link}<br><small>Share for DM</small>`; document.getElementById('linkModal').classList.add('active'); }
+    function copyUniqueLink() { const link = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(currentUser)}`; navigator.clipboard.writeText(link); showToast('Link copied','green'); }
+    function closeLinkModal() { document.getElementById('linkModal').classList.remove('active'); }
+    async function processInviteIfPresent() { const params=new URLSearchParams(window.location.search); const target=params.get('invite'); if(!target || target===currentUser) return; const roomId=getDmRoomId(currentUser,target); const exists=await db.ref(`dm_chats/${roomId}/messages`).limitToFirst(1).once('value'); if(exists.exists()) { switchRoom(roomId,target,false,true,target); return; } const banner=document.createElement('div'); banner.className='invite-banner'; banner.innerHTML=`<div><strong>${target}</strong> invited you</div><button onclick="sendDmRequest('${target}');this.parentElement.remove()">Connect</button>`; document.body.appendChild(banner); setTimeout(()=>banner.remove(),30000); }
+
+    // Mic button events: hold to record, or click to start/stop (better UX)
+    let pressTimer = null;
+    micBtn.addEventListener('mousedown', () => { pressTimer = setTimeout(() => startRecording(), 150); });
+    micBtn.addEventListener('mouseup', () => { if (pressTimer) clearTimeout(pressTimer); if (isRecording) stopRecording(); });
+    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(() => startRecording(), 150); });
+    micBtn.addEventListener('touchend', () => { if (pressTimer) clearTimeout(pressTimer); if (isRecording) stopRecording(); });
+    // Also allow click to toggle (fallback)
+    micBtn.addEventListener('click', () => { if (!isRecording) startRecording(); else stopRecording(); });
+
+    // Presence & init
+    const presRef = db.ref('presence/' + safeUser);
+    presRef.set({ name: currentUser, online: true, t: Date.now() });
+    presRef.onDisconnect().remove();
+    setInterval(() => { presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
+    refreshOnlineBar();
+    setupTypingForRoom('public');
+    loadMessages();
+    document.getElementById('exitBar').style.display = 'none';
+    setTimeout(processInviteIfPresent, 500);
+    document.getElementById('inp').addEventListener('keypress', e => { if(e.key === 'Enter') sendTextMessage(); });
+    window.onclick = e => { if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(e.target===document.getElementById('linkModal')) closeLinkModal(); if(e.target===document.getElementById('profileModal')) closeProfileModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
+</script>
 </body>
 </html>
