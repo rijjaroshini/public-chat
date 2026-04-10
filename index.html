@@ -102,3 +102,461 @@
         .received { align-self: flex-start; align-items: flex-start; }
         .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.93rem; position: relative; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid var(--glass-border); word-break: break-word; }
         .sent .bubble { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; border-bottom-right-radius: 4px; border: none; }
+        .received .bubble { background: var(--glass-bg); border-bottom-left-radius: 4px; }
+        .msg-info { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; padding: 0 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .deleted-msg { font-style: italic; opacity: 0.5; font-size: 0.83rem; }
+        
+        /* DEL MENU */
+        .del-menu {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            right: 0;
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            z-index: 200;
+            width: 130px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+        .del-menu button { width: 100%; padding: 8px 10px; border: none; background: none; color: white; text-align: left; font-size: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--glass-border); }
+        .del-menu button:last-child { border-bottom: none; }
+        .del-menu button:hover { background: rgba(255,255,255,0.08); }
+        
+        /* MULTI-SELECT */
+        .msg-select-checkbox { position: absolute; left: -28px; top: 12px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); z-index: 5; }
+        .sent .msg-select-checkbox { left: auto; right: -28px; }
+        .selection-toolbar {
+            background: #1e293b; border-bottom: 1px solid var(--glass-border); padding: 6px 14px;
+            display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-shrink: 0;
+            font-size: 0.75rem; flex-wrap: wrap;
+        }
+        .selection-left { display: flex; align-items: center; gap: 12px; }
+        .select-all-checkbox { display: flex; align-items: center; gap: 5px; }
+        .select-all-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+        .selection-actions button { background: rgba(255,255,255,0.1); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.7rem; }
+        .selection-actions .del-me-btn { background: rgba(248,113,113,0.2); color: #f87171; }
+        .selection-actions .del-everyone-btn { background: rgba(239,68,68,0.3); color: #ff9f9f; }
+        
+        /* INPUT */
+        .input-container { padding: 9px 14px 5px; background: rgba(15,23,42,0.5); flex-shrink: 0; }
+        .input-wrapper { background: rgba(30,41,59,0.9); border: 1px solid var(--glass-border); border-radius: 28px; display: flex; padding: 5px 5px 5px 16px; align-items: center; gap: 4px; }
+        .input-wrapper input { flex: 1; background: none; border: none; color: white; font-size: 0.93rem; font-family: inherit; padding: 8px 0; }
+        .emoji-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0 6px; }
+        .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; color: var(--bg-dark); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+        .emoji-panel {
+            position: absolute; bottom: 75px; left: 10px; right: 10px; background: #1e293b; border-radius: 24px;
+            border: 1px solid var(--glass-border); backdrop-filter: blur(20px); padding: 12px;
+            display: none; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px;
+            max-height: 200px; overflow-y: auto; z-index: 100;
+        }
+        .emoji-panel.show { display: grid; }
+        .emoji-item { font-size: 1.7rem; text-align: center; padding: 6px; cursor: pointer; border-radius: 16px; }
+        .bottom-safe-bar { height: env(safe-area-inset-bottom,18px); background: #0f172a; width: 100%; flex-shrink: 0; }
+
+        /* MODAL COMMON */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: #1e293b; border: 1px solid var(--glass-border); border-radius: 24px; padding: 20px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: popIn 0.25s ease-out; }
+        @keyframes popIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+        .modal-box h3 { font-size: 1.1rem; margin-bottom: 16px; text-align: center; background: linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal-field { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 11px 15px; color: white; font-size: 0.88rem; width: 100%; margin-bottom: 12px; font-family: inherit; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+        .btn-primary { flex:1; padding:11px; border:none; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-weight:600; cursor:pointer; }
+        .btn-cancel { flex:1; padding:11px; border:1px solid var(--glass-border); border-radius:14px; background:transparent; color:var(--text-dim); cursor:pointer; }
+        .btn-danger { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+        
+        /* Profile specific */
+        .profile-pic-large { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; background: linear-gradient(135deg,var(--primary),var(--secondary)); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 3px solid #c084fc; }
+        .profile-pic-large img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-note { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 16px; font-size: 0.8rem; color: #cbd5e1; text-align: center; margin: 10px 0; word-break: break-word; }
+        .file-input-label { background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 8px; border-radius: 40px; text-align: center; font-size: 0.7rem; cursor: pointer; margin-top: 5px; display: block; }
+        .file-input-label input { display: none; }
+        .dm-badge { background: linear-gradient(135deg,#22c55e,#16a34a); padding: 2px 8px; border-radius: 8px; font-size: 0.62rem; color: white; }
+        .room-list { max-height: 180px; overflow-y: auto; margin-bottom: 12px; }
+        .room-item { display: flex; justify-content: space-between; background: var(--glass-bg); border-radius: 12px; padding: 8px 12px; margin-bottom: 6px; cursor: pointer; }
+        .tab-btns { display: flex; gap: 8px; margin-bottom: 14px; }
+        .tab-btn { flex:1; padding: 8px; border-radius: 12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:0.75rem; }
+        .tab-btn.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color:white; }
+        .error-msg { color:#f87171; font-size:0.7rem; text-align:center; margin-top:5px; }
+
+        /* Link Modal special styling */
+        .link-url-container {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-size: 0.75rem;
+            font-family: monospace;
+            border: 1px solid var(--glass-border);
+            color: #a78bfa;
+            text-align: center;
+        }
+        .copy-link-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            width: 100%;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="top-header">
+        <div class="room-title" id="headerLeft"><span>💬 Group Chat</span></div>
+        <div class="header-right">
+            <button class="icon-btn" id="multiSelectBtn" onclick="toggleMultiSelectMode()">📌 Select</button>
+            <button class="icon-btn" onclick="openRoomModal()">🔒 Rooms</button>
+            <!-- NEW: Unique Invite Link Button for owner (right corner) -->
+            <button class="icon-btn" id="myLinkBtn" onclick="showMyUniqueLink()" style="background: rgba(16,185,129,0.15); border-color: #10b981;">🔗 My Link</button>
+            <div class="user-chip" id="userChip" onclick="openMyProfileModal()">👤 پروفائل</div>
+        </div>
+    </div>
+
+    <!-- ONLINE USERS BAR -->
+    <div class="online-bar" id="onlineBar">
+        <span class="online-bar-label">🟢 Online:</span>
+        <span class="no-online" id="noOnline">لوڈ ہو رہا ہے...</span>
+    </div>
+    <div id="typingIndicator" class="typing-indicator" style="display: none;">✍️ <span id="typingUsersText"></span> ٹائپ کر رہا ہے...</div>
+
+    <!-- MESSAGES -->
+    <div id="messages"></div>
+
+    <!-- SELECTION TOOLBAR -->
+    <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+        <div class="selection-left">
+            <div class="select-all-checkbox"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"> <label>Select All</label></div>
+            <span id="selectedCount">0 selected</span>
+        </div>
+        <div class="selection-actions">
+            <button class="del-me-btn" onclick="deleteSelectedForMe()">🗑️ Delete for me</button>
+            <button class="del-everyone-btn" onclick="deleteSelectedForEveryone()">⚠️ Delete for everyone</button>
+            <button class="cancel-select" onclick="toggleMultiSelectMode(false)">Cancel</button>
+        </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <input type="text" id="inp" placeholder="پیغام لکھیں..." autocomplete="off">
+            <button class="emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
+            <button class="send-btn" onclick="send()">↑</button>
+        </div>
+        <div id="emojiPanel" class="emoji-panel"></div>
+    </div>
+    <div class="bottom-safe-bar"></div>
+
+    <!-- DM NOTIFICATIONS -->
+    <div class="dm-request-popup" id="dmRequestPopup"></div>
+
+    <!-- ROOM MODAL -->
+    <div class="modal-overlay" id="roomModal"><div class="modal-box"><h3>🔒 Private Rooms</h3><div class="tab-btns"><button class="tab-btn active" onclick="switchTab('join')">Join</button><button class="tab-btn" onclick="switchTab('create')">Create</button><button class="tab-btn" onclick="switchTab('delete')">🗑️ Delete</button></div><div id="tab-join" class="tab-content active"><div id="roomListContainer" class="room-list"></div><input class="modal-field" id="joinRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="joinPassword" placeholder="Password"><div id="joinError" class="error-msg"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="joinRoom()">Join</button></div></div><div id="tab-create" class="tab-content"><input class="modal-field" id="newRoomId" placeholder="Room ID"><input class="modal-field" id="newRoomName" placeholder="Room Name"><input class="modal-field" type="password" id="newRoomPass" placeholder="Password"><div id="createError"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="createRoom()">Create</button></div></div><div id="tab-delete" class="tab-content"><div id="deleteRoomListContainer" class="room-list"></div><input class="modal-field" id="deleteRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="deleteRoomPass" placeholder="Password"><div id="deleteError"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-danger" onclick="deleteRoom()">Delete Room</button></div></div></div></div>
+
+    <!-- PROFILE MODAL (view/edit) -->
+    <div class="modal-overlay" id="profileModal"><div class="modal-box" id="profileModalContent"></div></div>
+
+    <!-- NEW: UNIQUE LINK MODAL (only owner sees own link) -->
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-box">
+            <h3>🔗 آپ کی ذاتی لنک (Your Unique Link)</h3>
+            <p style="font-size: 0.75rem; text-align: center; margin-bottom: 12px; color: #94a3b8;">یہ لنک صرف آپ کے لیے ہے — دوسرے نہیں دیکھ سکتے</p>
+            <div class="link-url-container" id="uniqueLinkDisplay"></div>
+            <div class="modal-actions">
+                <button class="btn-primary copy-link-btn" id="copyLinkBtn" onclick="copyUniqueLink()">📋 کاپی کریں</button>
+                <button class="btn-cancel" onclick="closeLinkModal()">بند کریں</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        firebase.initializeApp({ apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y", authDomain: "public-chat-app-e75fc.firebaseapp.com", databaseURL: "https://public-chat-app-e75fc-default-rtdb.firebaseio.com/", projectId: "public-chat-app-e75fc" });
+        const db = firebase.database();
+        let currentUser = localStorage.getItem('user');
+        if (!currentUser || currentUser === "null") { currentUser = prompt("اپنا نام لکھیں:") || "User_" + Math.floor(Math.random() * 1000); localStorage.setItem('user', currentUser); }
+        const safeUser = currentUser.replace(/[.#$[\] /]/g,'_');
+        document.getElementById('userChip').innerHTML = "👤 " + currentUser;
+        
+        // Profile references
+        const profilesRef = db.ref('user_profiles');
+        let currentUserProfile = { pic: null, note: "ہیلو! میں یہاں ہوں۔" };
+        
+        // Save profile to Firebase
+        function saveProfileToDB(picBase64, noteText) {
+            let update = { name: currentUser, updatedAt: Date.now() };
+            if (picBase64 !== undefined) update.pic = picBase64;
+            if (noteText !== undefined) update.note = noteText;
+            profilesRef.child(safeUser).update(update);
+        }
+        
+        // Load profile for any user
+        async function getUserProfile(userId, userName) {
+            const snap = await profilesRef.child(userId).once('value');
+            if (snap.exists()) return snap.val();
+            return { pic: null, note: "مزاج ہے؟", name: userName };
+        }
+        
+        // Initialize current user profile
+        profilesRef.child(safeUser).once('value', snap => {
+            if (!snap.exists()) {
+                saveProfileToDB(null, currentUserProfile.note);
+            } else {
+                const data = snap.val();
+                if (data.note) currentUserProfile.note = data.note;
+                if (data.pic) currentUserProfile.pic = data.pic;
+            }
+        });
+        
+        // Open my profile edit modal
+        function openMyProfileModal() {
+            const modal = document.getElementById('profileModal');
+            const content = document.getElementById('profileModalContent');
+            content.innerHTML = `
+                <h3>📸 میرا پروفائل</h3>
+                <div style="text-align:center">
+                    <div class="profile-pic-large" id="myProfilePicPreview">
+                        ${currentUserProfile.pic ? `<img src="${currentUserProfile.pic}" alt="profile">` : `<span style="font-size:2rem">${currentUser.charAt(0).toUpperCase()}</span>`}
+                    </div>
+                    <label class="file-input-label">📷 تصویر تبدیل کریں<input type="file" id="profileImageInput" accept="image/*"></label>
+                </div>
+                <textarea id="profileNoteInput" class="modal-field" rows="2" placeholder="اپنی حالت (Status) لکھیں..." maxlength="80">${currentUserProfile.note || ''}</textarea>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeProfileModal()">Cancel</button>
+                    <button class="btn-primary" onclick="updateMyProfile()">محفوظ کریں</button>
+                </div>
+            `;
+            modal.classList.add('active');
+            const fileInput = document.getElementById('profileImageInput');
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const size = 150;
+                            canvas.width = size; canvas.height = size;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, size, size);
+                            const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                            const previewDiv = document.getElementById('myProfilePicPreview');
+                            previewDiv.innerHTML = `<img src="${base64}" alt="profile">`;
+                            currentUserProfile.pic = base64;
+                        };
+                        img.src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+        }
+        
+        function updateMyProfile() {
+            const newNote = document.getElementById('profileNoteInput').value.trim();
+            if (newNote) currentUserProfile.note = newNote;
+            saveProfileToDB(currentUserProfile.pic, currentUserProfile.note);
+            closeProfileModal();
+            showToast("پروفائل اپڈیٹ ہو گیا", "green");
+            refreshOnlineBar(); // force refresh
+        }
+        
+        function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
+        
+        // View other user's profile
+        async function viewUserProfile(userName, userId) {
+            const profile = await getUserProfile(userId, userName);
+            const picHtml = profile.pic ? `<img src="${profile.pic}">` : `<span style="font-size:2rem">${userName.charAt(0).toUpperCase()}</span>`;
+            const modal = document.getElementById('profileModal');
+            document.getElementById('profileModalContent').innerHTML = `
+                <h3>👤 ${userName}</h3>
+                <div style="text-align:center">
+                    <div class="profile-pic-large">${picHtml}</div>
+                    <div class="profile-note">📝 "${profile.note || 'کوئی نوٹ نہیں'}"</div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="sendDmFromProfile('${userName.replace(/'/g, "\\'")}')">💬 پیغام بھیجیں</button>
+                    <button class="btn-cancel" onclick="closeProfileModal()">بند کریں</button>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+        
+        function sendDmFromProfile(targetUser) { closeProfileModal(); sendDmRequest(targetUser); }
+        
+        // Online bar with profile pictures
+        let onlineUsersListener = null;
+        function refreshOnlineBar() {
+            if (onlineUsersListener) db.ref('presence').off('value', onlineUsersListener);
+            onlineUsersListener = db.ref('presence').on('value', async (snap) => {
+                const bar = document.getElementById('onlineBar');
+                bar.innerHTML = '<span class="online-bar-label">🟢 Online:</span>';
+                if (!snap.exists()) { bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>'; return; }
+                let usersList = [];
+                const now = Date.now();
+                snap.forEach(child => { const u = child.val(); if (u && u.name && u.t && (now - u.t) < 60000) usersList.push({ name: u.name, id: child.key }); });
+                for (let u of usersList) {
+                    const profile = await getUserProfile(u.id, u.name);
+                    const isMe = u.name === currentUser;
+                    const av = document.createElement('div');
+                    av.className = 'user-avatar' + (isMe ? ' me' : '');
+                    av.title = isMe ? 'آپ کا پروفائل' : `${u.name} کی پروفائل دیکھیں`;
+                    let picHtml = '';
+                    if (profile.pic) picHtml = `<img src="${profile.pic}" alt="pic">`;
+                    else picHtml = `<span>${u.name.charAt(0).toUpperCase()}</span>`;
+                    av.innerHTML = `<div class="av-circle">${picHtml}<div class="online-dot"></div></div><div class="av-name">${isMe ? 'You' : u.name}</div>`;
+                    if (!isMe) av.onclick = () => viewUserProfile(u.name, u.id);
+                    else av.onclick = () => openMyProfileModal();
+                    bar.appendChild(av);
+                }
+                if (usersList.length === 0) bar.innerHTML += '<span class="no-online">کوئی online نہیں</span>';
+            });
+        }
+        
+        // ========== EXISTING CHAT LOGIC ==========
+        let currentRoom = 'public';
+        let chatRef = db.ref('chats');
+        let chatListener = null;
+        let selectModeActive = false;
+        let selectedMsgKeys = new Set();
+        let typingTimeout = null, currentTypingListener = null;
+        
+        function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
+            if (chatListener) chatRef.off('value', chatListener);
+            if (currentTypingListener) currentTypingListener();
+            currentRoom = roomId;
+            const hl = document.getElementById('headerLeft');
+            if (isDm) { chatRef = db.ref('dm_chats/' + roomId + '/messages'); hl.innerHTML = `<span>💬 ${dmWith}</span><span class="dm-badge">DM</span><button class="leave-btn" onclick="leaveRoom()">← Back</button>`; }
+            else if (isPrivate) { chatRef = db.ref('private_rooms/' + roomId + '/messages'); hl.innerHTML = `<span>🔒 ${roomName}</span><button class="leave-btn" onclick="leaveRoom()">← Leave</button>`; }
+            else { chatRef = db.ref('chats'); hl.innerHTML = `<span>💬 Group Chat</span>`; }
+            resetSelectModeUI(false);
+            loadMessages();
+            setupTypingForRoom(roomId);
+        }
+        function leaveRoom() { switchRoom('public','',false,false,null); }
+        
+        function setupTypingForRoom(roomId) {
+            if (currentTypingListener) currentTypingListener();
+            const typingQuery = db.ref(`typing_status/${roomId}`);
+            const listener = typingQuery.on('value', snap => {
+                const div = document.getElementById('typingIndicator');
+                if (!snap.exists()) { div.style.display = 'none'; return; }
+                const typingUsers = [];
+                snap.forEach(child => { const val = child.val(); if (val === true && child.key !== safeUser) typingUsers.push(child.key); else if (val && val.name && val.name !== currentUser && val.active) typingUsers.push(val.name); });
+                if (typingUsers.length === 0) div.style.display = 'none';
+                else { document.getElementById('typingUsersText').innerText = typingUsers.slice(0,3).join(', ') + (typingUsers.length>3 ? '...' : ''); div.style.display = 'block'; }
+            });
+            currentTypingListener = () => typingQuery.off('value', listener);
+            const inputElem = document.getElementById('inp');
+            const updateTyping = (isTyping) => { const ref = db.ref(`typing_status/${roomId}/${safeUser}`); if (isTyping) { ref.set({ name: currentUser, active: true }); ref.onDisconnect().remove(); } else ref.remove(); };
+            const handleInput = () => { updateTyping(true); if (typingTimeout) clearTimeout(typingTimeout); typingTimeout = setTimeout(() => updateTyping(false), 1200); };
+            inputElem.removeEventListener('input', handleInput);
+            inputElem.addEventListener('input', handleInput);
+        }
+        
+        function loadMessages() {
+            const box = document.getElementById('messages');
+            box.innerHTML = ''; let lastDate = '';
+            chatListener = chatRef.orderByChild('timestamp').on('value', snap => {
+                box.innerHTML = ''; lastDate = '';
+                snap.forEach(child => {
+                    const d = child.val(); const key = child.key;
+                    if (d.deletedBy && d.deletedBy[safeUser]) return;
+                    if (d.date && d.date !== lastDate) { const dd = document.createElement('div'); dd.className = 'date-divider'; dd.innerHTML = `<span>📅 ${d.date}</span>`; box.appendChild(dd); lastDate = d.date; }
+                    const isSent = (d.name === currentUser);
+                    const div = document.createElement('div'); div.className = 'msg ' + (isSent ? 'sent' : 'received');
+                    if (selectModeActive) div.classList.add('select-mode');
+                    const content = d.isDeletedEveryone ? `<span class="deleted-msg">🚫 یہ میسج ڈیلیٹ کر دیا گیا</span>` : (d.text || '');
+                    const nameHtml = `<div style="font-size:0.7rem; font-weight:700; margin-bottom:4px; color:${isSent ? '#c7d2fe' : '#d8b4fe'};">👤 ${d.name}${isSent ? ' (You)' : ''}</div>`;
+                    const info = `<span>📅 ${d.date}</span><span> · </span><span>${d.time}</span>`;
+                    let checkboxHtml = '';
+                    if (selectModeActive) checkboxHtml = `<input type="checkbox" class="msg-select-checkbox" data-key="${key}" onclick="event.stopPropagation(); toggleMessageSelection('${key}', this.checked)">`;
+                    div.innerHTML = `<div style="position:relative">${checkboxHtml}<div id="menu-${key}" class="del-menu"><button onclick="repostMessage('${(d.text||'').replace(/'/g, "\\'")}', '${d.name.replace(/'/g, "\\'")}')">↩️ Repost</button><button onclick="deleteForMe('${key}')">Delete for me</button>${isSent && !d.isDeletedEveryone ? `<button style="color:#f87171" onclick="deleteForEveryone('${key}')">Delete for everyone</button>` : ''}</div><div class="bubble" onclick="toggleMenu('${key}')">${nameHtml}${content}</div></div><div class="msg-info">${info}</div>`;
+                    box.appendChild(div);
+                });
+                box.scrollTop = box.scrollHeight;
+                updateSelectAllCheckboxState();
+            });
+        }
+        
+        function repostMessage(text, user) { document.getElementById('inp').value = `📎 Repost from ${user}: "${text}"`; closeEmojiPanel(); }
+        function toggleMenu(key) { document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none'); const m = document.getElementById('menu-'+key); if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
+        function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
+        function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); }
+        function send() { const inp = document.getElementById('inp'); const text = inp.value.trim(); if(!text) return; const now = new Date(); chatRef.push({ name: currentUser, text, time: now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: now.toLocaleDateString('en-GB'), timestamp: Date.now() }); inp.value = ''; if(typingTimeout) clearTimeout(typingTimeout); db.ref(`typing_status/${currentRoom}/${safeUser}`).remove(); closeEmojiPanel(); }
+        
+        // Multi-select functions
+        function toggleMultiSelectMode(forceOff) { if(forceOff === true || selectModeActive) { resetSelectModeUI(false); return; } selectModeActive = true; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'flex'; document.getElementById('multiSelectBtn').innerHTML = '✖ Cancel'; loadMessages(); }
+        function resetSelectModeUI() { selectModeActive = false; selectedMsgKeys.clear(); document.getElementById('selectionToolbar').style.display = 'none'; document.getElementById('multiSelectBtn').innerHTML = '📌 Select'; loadMessages(); }
+        function toggleMessageSelection(key, checked) { if(checked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); updateSelectedCount(); updateSelectAllCheckboxState(); }
+        function updateSelectedCount() { document.getElementById('selectedCount').innerText = `${selectedMsgKeys.size} selected`; }
+        function updateSelectAllCheckboxState() { const cbs = document.querySelectorAll('.msg-select-checkbox'); const all = Array.from(cbs); const checked = all.filter(cb=>cb.checked).length; const selAll = document.getElementById('selectAllCheckbox'); if(selAll) { selAll.checked = all.length > 0 && checked === all.length; selAll.indeterminate = checked > 0 && checked < all.length; } }
+        function toggleSelectAll() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.msg-select-checkbox').forEach(cb => { const key = cb.getAttribute('data-key'); if(key) { if(isChecked) selectedMsgKeys.add(key); else selectedMsgKeys.delete(key); cb.checked = isChecked; } }); updateSelectedCount(); updateSelectAllCheckboxState(); }
+        async function deleteSelectedForMe() { for(let key of selectedMsgKeys) await chatRef.child(key+'/deletedBy/'+safeUser).set(true); resetSelectModeUI(); showToast(`${selectedMsgKeys.size} messages deleted for you`,'green'); }
+        async function deleteSelectedForEveryone() { for(let key of selectedMsgKeys) { const snap = await chatRef.child(key).once('value'); if(snap.val()?.name === currentUser) await chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true }); } resetSelectModeUI(); showToast('Deleted for everyone (your msgs)','green'); }
+        
+        // Emoji
+        const commonEmojis = ["😀","😂","😍","🥰","😎","🤣","😊","❤️","👍","🔥","🎉","✨","🌟","💯","✅","💬","🔒","📌","📍","💡","🎈"];
+        function toggleEmojiPanel() { const p = document.getElementById('emojiPanel'); if(p.classList.contains('show')) p.classList.remove('show'); else { if(p.children.length===0) commonEmojis.forEach(e=>{ const span=document.createElement('span'); span.className='emoji-item'; span.textContent=e; span.onclick=()=>{ document.getElementById('inp').value+=e; p.classList.remove('show'); }; p.appendChild(span); }); p.classList.add('show'); } }
+        function closeEmojiPanel() { document.getElementById('emojiPanel').classList.remove('show'); }
+        
+        // DM and rooms (abbreviated but functional)
+        function getDmRoomId(a,b) { return [a.replace(/[.#$[\] /]/g,'_'),b.replace(/[.#$[\] /]/g,'_')].sort().join('__dm__'); }
+        function sendDmRequest(target) { if(target===currentUser) return showToast("خود سے DM نہیں",'red'); const targetSafe=target.replace(/[.#$[\] /]/g,'_'); const reqRef=db.ref('dm_requests/'+targetSafe).push({ from:currentUser, fromSafe:safeUser, status:'pending', t:Date.now() }); showToast(`Request sent to ${target}`,'green'); reqRef.on('value', snap=>{ if(snap.exists() && snap.val().status==='accepted'){ reqRef.off(); const roomId=getDmRoomId(currentUser,target); switchRoom(roomId,target,false,true,target); showToast(`${target} نے accept کر لیا!`,'green'); } }); setTimeout(()=>reqRef.off(), 60000); }
+        db.ref('dm_requests/'+safeUser).on('child_added', snap=>{ const data=snap.val(); if(data?.status==='pending') showDmNotif(data.from, snap.key); });
+        function showDmNotif(from,key){ const pop=document.getElementById('dmRequestPopup'); const n=document.createElement('div'); n.className='dm-notif'; n.innerHTML=`<div><strong>${from}</strong> آپ کو DM کرنا چاہتا ہے</div><div style="display:flex;gap:8px;margin-top:6px"><button class="accept-btn" onclick="respondDm('${key}','${from}','accepted')">Accept</button><button class="decline-btn" onclick="respondDm('${key}','${from}','declined')">Decline</button></div>`; pop.appendChild(n); setTimeout(()=>n.remove(),20000); }
+        function respondDm(key,from,status){ db.ref(`dm_requests/${safeUser}/${key}`).update({status}).then(()=>{ if(status==='accepted'){ const roomId=getDmRoomId(currentUser,from); switchRoom(roomId,from,false,true,from); } }); document.querySelectorAll('.dm-notif').forEach(el=>el.remove()); }
+        function openRoomModal(){ document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
+        function closeRoomModal(){ document.getElementById('roomModal').classList.remove('active'); }
+        function loadRoomList(){ db.ref('private_rooms').once('value', snap=>{ const c=document.getElementById('roomListContainer'); c.innerHTML=''; snap.forEach(ch=>{ const rid=ch.key; const d=ch.val(); const div=document.createElement('div'); div.className='room-item'; div.innerHTML=`<span>🔒 ${d.name||rid}</span><span class="rbadge">Private</span>`; div.onclick=()=>{ document.getElementById('joinRoomId').value=rid; document.getElementById('joinPassword').focus(); }; c.appendChild(div); }); }); }
+        function createRoom(){ const rid=document.getElementById('newRoomId').value.trim(); const name=document.getElementById('newRoomName').value.trim(); const pass=document.getElementById('newRoomPass').value.trim(); if(!rid||!name||!pass) return; db.ref('private_rooms/'+rid).set({ name, passwordHash:btoa(pass+'_fcpro'), createdBy:currentUser }).then(()=>{ closeRoomModal(); switchRoom(rid,name,true,false,null); }); }
+        function joinRoom(){ const rid=document.getElementById('joinRoomId').value.trim(); const pass=document.getElementById('joinPassword').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ closeRoomModal(); switchRoom(rid,snap.val().name,true,false,null); } else showToast('غلط room ID یا password','red'); }); }
+        function deleteRoom(){ const rid=document.getElementById('deleteRoomId').value.trim(); const pass=document.getElementById('deleteRoomPass').value.trim(); db.ref('private_rooms/'+rid).once('value', snap=>{ if(snap.exists() && snap.val().passwordHash===btoa(pass+'_fcpro')){ snap.ref.remove(); if(currentRoom===rid) switchRoom('public','',false,false,null); closeRoomModal(); showToast('Room delete','red'); } }); }
+        function showToast(msg,col){ const t=document.createElement('div'); t.textContent=msg; t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid ${col==='green'?'#22c55e':'#f87171'};color:${col==='green'?'#22c55e':'#f87171'};padding:8px 18px;border-radius:40px;z-index:9999;font-size:0.8rem`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+
+        // ---------- NEW: UNIQUE LINK FOR OWNER (right corner feature) ----------
+        function getMyUniqueLink() {
+            // Generate a shareable link that contains the current user's name as reference
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const inviteParam = `invite=${encodeURIComponent(currentUser)}`;
+            return `${baseUrl}?${inviteParam}`;
+        }
+
+        function showMyUniqueLink() {
+            const link = getMyUniqueLink();
+            const displayDiv = document.getElementById('uniqueLinkDisplay');
+            displayDiv.innerHTML = `<span style="word-break:break-all;">🔗 ${link}</span><br><small style="color:#94a3b8;">اس لنک کو شیئر کریں — کوئی بھی اسے کھول سکتا ہے، لیکن آپ کی شناخت آپ کے پاس ہے</small>`;
+            document.getElementById('linkModal').classList.add('active');
+        }
+
+        function copyUniqueLink() {
+            const link = getMyUniqueLink();
+            navigator.clipboard.writeText(link).then(() => {
+                showToast("✅ لنک کاپی ہو گیا! اب آپ اسے کہیں بھی شیئر کر سکتے ہیں", "green");
+            }).catch(() => {
+                showToast("کاپی نہیں ہو سکا، دستی طور پر کریں", "red");
+            });
+        }
+
+        function closeLinkModal() {
+            document.getElementById('linkModal').classList.remove('active');
+        }
+        // ----------------------------------------------------------------
+
+        // Init
+        refreshOnlineBar();
+        loadMessages();
+        document.getElementById('inp').addEventListener('keypress', e=>{ if(e.key==='Enter') send(); });
+        window.onclick = e=>{ if(!e.target.closest('.bubble')) document.querySelectorAll('.del-menu').forEach(m=>m.style.display='none'); if(e.target===document.getElementById('roomModal')) closeRoomModal(); if(e.target===document.getElementById('linkModal')) closeLinkModal(); if(!e.target.closest('.emoji-panel') && !e.target.closest('#emojiToggleBtn')) closeEmojiPanel(); };
+        setupTypingForRoom('public');
+        const presRef = db.ref('presence/' + safeUser);
+        presRef.set({ name: currentUser, online: true, t: Date.now() });
+        presRef.onDisconnect().remove();
+        setInterval(()=>{ presRef.set({ name: currentUser, online: true, t: Date.now() }); }, 15000);
+    </script>
+</body>
+</html>
+
+code original same rahe bas Jo apne notifications ka add wahi karo
