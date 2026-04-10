@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chat Pro · Voice Messages + Private Rooms</title>
+    <title>Chat Pro · Image Share + Private Rooms</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -182,53 +182,16 @@
             border: 1px solid var(--glass-border);
             border-bottom-left-radius: 5px;
         }
-        .voice-message {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 180px;
-        }
-        .voice-play-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            font-size: 1.2rem;
+        .image-message {
+            max-width: 220px;
+            border-radius: 16px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.1s;
         }
-        .voice-play-btn:hover { background: rgba(255,255,255,0.4); }
-        .voice-timer {
-            font-size: 0.8rem;
-            font-family: monospace;
+        .image-message img {
+            width: 100%;
+            border-radius: 16px;
+            display: block;
         }
-        .recording-indicator {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ef4444;
-            padding: 8px 20px;
-            border-radius: 40px;
-            z-index: 200;
-            font-weight: bold;
-            display: none;
-            gap: 8px;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .recording-indicator .pulse {
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
         .msg-info { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; padding: 0 6px; }
         .selection-toolbar {
             background: #1e293b;
@@ -281,12 +244,6 @@
             background: white;
             color: #0f172a;
         }
-        .mic-btn.recording {
-            background: #ef4444;
-            color: white;
-            animation: micPulse 1s infinite;
-        }
-        @keyframes micPulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         .emoji-panel {
             position: absolute;
             bottom: 85px;
@@ -368,6 +325,24 @@
         .sent .msg-select-checkbox { left: auto; right: -28px; }
         .del-menu { display: none; position: absolute; bottom: 110%; right: 0; background: #0f172a; border-radius: 18px; width: 140px; overflow: hidden; z-index: 200; border: 1px solid var(--glass-border);}
         .del-menu button { width: 100%; padding: 8px 12px; background: none; border: none; color: white; text-align: left; font-size: 0.75rem; cursor: pointer; border-bottom: 1px solid var(--glass-border);}
+        .full-image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .full-image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -395,20 +370,20 @@
     <div class="input-wrapper">
         <input type="text" id="inp" placeholder="Type a message..." autocomplete="off">
         <button class="action-btn emoji-btn" id="emojiToggleBtn" onclick="toggleEmojiPanel()">😊</button>
-        <button class="action-btn mic-btn" id="micBtn" title="Hold to record voice message">🎤</button>
+        <button class="action-btn attach-btn" id="attachBtn" title="Attach image">📎</button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
         <button class="action-btn send-btn" onclick="sendTextMessage()">↑</button>
     </div>
     <div id="emojiPanel" class="emoji-panel"></div>
 </div>
-<div id="recordingIndicator" class="recording-indicator"><div class="pulse"></div> Recording... <span id="recordTimer">0:00</span></div>
 
-<!-- Modals (same as before) -->
+<!-- Modals -->
 <div class="modal-overlay" id="roomModal"><div class="modal-box"><h3>🔐 Private Rooms</h3><div class="tab-btns"><button class="tab-btn active" onclick="switchTab('join')">Join</button><button class="tab-btn" onclick="switchTab('create')">Create</button><button class="tab-btn" onclick="switchTab('delete')">🗑️ Delete</button></div><div id="tab-join"><div id="roomListContainer" class="room-list"></div><input class="modal-field" id="joinRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="joinPassword" placeholder="Password"><div class="modal-actions" style="display:flex; gap:10px;"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="joinRoom()">Join Room</button></div></div><div id="tab-create"><input class="modal-field" id="newRoomId" placeholder="Room ID (unique)"><input class="modal-field" id="newRoomName" placeholder="Room name"><input class="modal-field" type="password" id="newRoomPass" placeholder="Password"><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-primary" onclick="createRoom()">Create</button></div></div><div id="tab-delete"><div id="deleteRoomListContainer" class="room-list"></div><input class="modal-field" id="deleteRoomId" placeholder="Room ID"><input class="modal-field" type="password" id="deleteRoomPass" placeholder="Password"><div class="modal-actions"><button class="btn-cancel" onclick="closeRoomModal()">Cancel</button><button class="btn-danger" onclick="deleteRoom()">Delete Room</button></div></div></div></div>
 <div class="modal-overlay" id="profileModal"><div class="modal-box"><h3>👤 Edit Profile</h3><div class="profile-pic-large" id="profilePicPreview" onclick="document.getElementById('profileImageInput').click()"><span id="profilePicPlaceholder">📸</span><div class="camera-icon">📷</div></div><input type="file" id="profileImageInput" accept="image/*" style="display:none"><input class="modal-field" id="profileNameInput" placeholder="Display name"><div class="modal-actions"><button class="btn-cancel" onclick="closeProfileModal()">Cancel</button><button class="btn-primary" onclick="updateProfile()">Save</button></div></div></div>
 <div class="modal-overlay" id="linkModal"><div class="modal-box"><h3>🔗 Your Private Invite Link</h3><div id="uniqueLinkDisplay" style="background:#0f172a; border-radius:20px; padding:12px; word-break:break-all;"></div><div class="modal-actions"><button class="btn-primary" onclick="copyUniqueLink()">📋 Copy Link</button><button class="btn-cancel" onclick="closeLinkModal()">Close</button></div></div></div>
 
 <script>
-    // Firebase config (same)
+    // Firebase config
     const firebaseConfig = {
         apiKey: "AIzaSyA89V4_KEM07f6QDYVFQPhy4vK3p8Y06Y",
         authDomain: "public-chat-app-e75fc.firebaseapp.com",
@@ -418,10 +393,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // User
+    // User management
     let currentUser = localStorage.getItem('chat_user');
     if (!currentUser || currentUser === "null") {
-        currentUser = prompt("Enter your name:") || "User_" + Math.floor(Math.random() * 999);
+        currentUser = prompt("Enter your display name:") || "User_" + Math.floor(Math.random() * 999);
         localStorage.setItem('chat_user', currentUser);
     }
     let safeUser = currentUser.replace(/[.#$[\]/]/g, '_');
@@ -440,17 +415,6 @@
     let selectModeActive = false, selectedMsgKeys = new Set();
     let typingTimeout = null, currentTypingListener = null;
 
-    // Voice recording variables
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let recordStartTime = 0;
-    let recordTimerInterval = null;
-    const micBtn = document.getElementById('micBtn');
-    const recordingIndicator = document.getElementById('recordingIndicator');
-    const recordTimerSpan = document.getElementById('recordTimer');
-
-    // Helper: show toast
     function showToast(msg, color) {
         const t = document.createElement('div');
         t.textContent = msg;
@@ -459,74 +423,59 @@
         setTimeout(() => t.remove(), 2800);
     }
 
-    // Request mic permission and start recording
-    async function startRecording() {
-        if (isRecording) return;
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            audioChunks = [];
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => {
-                    const base64Audio = reader.result; // includes data:audio/webm;base64,
-                    sendVoiceMessage(base64Audio);
-                };
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
-            };
-            mediaRecorder.start(100);
-            isRecording = true;
-            recordStartTime = Date.now();
-            recordingIndicator.style.display = 'flex';
-            micBtn.classList.add('recording');
-            recordTimerInterval = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-                const mins = Math.floor(elapsed / 60);
-                const secs = elapsed % 60;
-                recordTimerSpan.innerText = `${mins}:${secs.toString().padStart(2,'0')}`;
-                if (elapsed >= 60) { // max 60 seconds
-                    stopRecording();
-                }
-            }, 1000);
-        } catch (err) {
-            showToast("Microphone access denied or not available", "red");
-            console.error(err);
-        }
-    }
-
-    function stopRecording() {
-        if (!isRecording || !mediaRecorder) return;
-        mediaRecorder.stop();
-        isRecording = false;
-        if (recordTimerInterval) clearInterval(recordTimerInterval);
-        recordingIndicator.style.display = 'none';
-        micBtn.classList.remove('recording');
-    }
-
-    // Send voice message
-    async function sendVoiceMessage(base64Audio) {
-        if (!base64Audio) return;
+    // Send image with compression
+    function sendImageMessage(base64Image) {
         const now = new Date();
         const message = {
             name: currentUser,
-            type: 'voice',
-            audio: base64Audio, // base64 string
-            duration: Math.floor((Date.now() - recordStartTime) / 1000),
+            type: 'image',
+            image: base64Image,
             time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             date: now.toLocaleDateString('en-US'),
             timestamp: Date.now()
         };
-        await chatRef.push(message);
-        // Reset recording vars
-        audioChunks = [];
-        recordStartTime = 0;
+        chatRef.push(message);
     }
 
-    // Send text message (original)
+    document.getElementById('attachBtn').addEventListener('click', () => {
+        document.getElementById('fileInput').click();
+    });
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select an image file', 'red');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                let width = img.width, height = img.height;
+                const maxDim = 800;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = (height * maxDim) / width;
+                        width = maxDim;
+                    } else {
+                        width = (width * maxDim) / height;
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                sendImageMessage(compressedBase64);
+                document.getElementById('fileInput').value = '';
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
     function sendTextMessage() {
         const inp = document.getElementById('inp');
         const text = inp.value.trim();
@@ -546,7 +495,6 @@
         closeEmojiPanel();
     }
 
-    // Modified loadMessages to handle voice messages
     function loadMessages() {
         const container = document.getElementById('messages');
         container.innerHTML = '';
@@ -571,18 +519,8 @@
                 const msgDiv = document.createElement('div');
                 msgDiv.className = `msg ${isSent ? 'sent' : 'received'}`;
                 let contentHtml = '';
-                if (msg.type === 'voice' && msg.audio) {
-                    // Voice message bubble
-                    const duration = msg.duration || 0;
-                    const minutes = Math.floor(duration / 60);
-                    const seconds = duration % 60;
-                    const durationText = `${minutes}:${seconds.toString().padStart(2,'0')}`;
-                    const audioId = `audio_${key}`;
-                    contentHtml = `<div class="voice-message">
-                        <button class="voice-play-btn" onclick="toggleVoicePlay('${audioId}', this)">▶️</button>
-                        <audio id="${audioId}" src="${msg.audio}" style="display:none"></audio>
-                        <span class="voice-timer">${durationText}</span>
-                    </div>`;
+                if (msg.type === 'image' && msg.image) {
+                    contentHtml = `<div class="image-message" onclick="showFullImage('${msg.image}')"><img src="${msg.image}" alt="image"></div>`;
                 } else {
                     contentHtml = msg.isDeletedEveryone ? `<span class="deleted-msg">🚫 This message was removed</span>` : (msg.text || '');
                 }
@@ -600,22 +538,16 @@
         });
     }
 
-    window.toggleVoicePlay = function(audioId, btn) {
-        const audio = document.getElementById(audioId);
-        if (!audio) return;
-        if (audio.paused) {
-            // Pause any other playing audio
-            document.querySelectorAll('audio').forEach(a => { if (!a.paused) a.pause(); });
-            audio.play();
-            btn.textContent = '⏸️';
-            audio.onended = () => { btn.textContent = '▶️'; };
-        } else {
-            audio.pause();
-            btn.textContent = '▶️';
-        }
+    window.showFullImage = (src) => {
+        const modal = document.createElement('div');
+        modal.className = 'full-image-modal';
+        modal.onclick = () => modal.remove();
+        const img = document.createElement('img');
+        img.src = src;
+        modal.appendChild(img);
+        document.body.appendChild(modal);
     };
 
-    // Other functions (exit, switchRoom, etc.) same as before with minor tweaks
     window.exitCurrentRoom = function() {
         if (currentRoomType === 'private') {
             db.ref(`private_rooms/${currentRoom}/members/${safeUser}`).remove();
@@ -625,6 +557,7 @@
         } else { showToast("✨ Already in main lobby", "green"); return; }
         switchRoom('public', '', false, false, null);
     };
+
     function switchRoom(roomId, roomName, isPrivate, isDm, dmWith) {
         if (chatListener) chatRef.off('value', chatListener);
         if (currentTypingListener) currentTypingListener();
@@ -652,7 +585,8 @@
         loadMessages();
         setupTypingForRoom(currentRoom);
     }
-    function setupTypingForRoom(roomKey) { /* same as before */ 
+
+    function setupTypingForRoom(roomKey) {
         if (currentTypingListener) currentTypingListener();
         const typingPath = db.ref(`typing_status/${roomKey}`);
         const listener = typingPath.on('value', snap => {
@@ -674,6 +608,7 @@
         inp.removeEventListener('input', handleInput);
         inp.addEventListener('input', handleInput);
     }
+
     function toggleMenu(key) { document.querySelectorAll('.del-menu').forEach(m => m.style.display = 'none'); const m = document.getElementById('menu-'+key); if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
     function deleteForMe(key) { chatRef.child(key+'/deletedBy/'+safeUser).set(true); }
     function deleteForEveryone(key) { chatRef.child(key).update({ text: 'This message was deleted', isDeletedEveryone: true, type: 'text' }); }
@@ -694,7 +629,7 @@
     function toggleEmojiPanel() { const panel = document.getElementById('emojiPanel'); if(panel.classList.contains('show')) panel.classList.remove('show'); else { if(panel.children.length===0) emojis.forEach(e=>{ const span=document.createElement('span'); span.className='emoji-item'; span.textContent=e; span.onclick=()=>{ document.getElementById('inp').value+=e; panel.classList.remove('show'); }; panel.appendChild(span); }); panel.classList.add('show'); } }
     function closeEmojiPanel() { document.getElementById('emojiPanel').classList.remove('show'); }
 
-    // Profile & image upload (same as before, abbreviated)
+    // Profile & online
     function openProfileSettings() { document.getElementById('profileNameInput').value = currentUser; const preview = document.getElementById('profilePicPreview'); if (userAvatarBase64) preview.innerHTML = `<img src="${userAvatarBase64}"><div class="camera-icon">📷</div>`; else preview.innerHTML = `<span style="font-size:2.5rem;">📸</span><div class="camera-icon">📷</div>`; document.getElementById('profileModal').classList.add('active'); }
     function closeProfileModal() { document.getElementById('profileModal').classList.remove('active'); }
     document.getElementById('profileImageInput').addEventListener('change', function(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(ev) { const img = new Image(); img.onload = function() { const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); let w=img.width, h=img.height; const max=150; if(w>h) { if(w>max) h*=max/w; w=max; } else { if(h>max) w*=max/h; h=max; } canvas.width=w; canvas.height=h; ctx.drawImage(img,0,0,w,h); const base64 = canvas.toDataURL('image/jpeg',0.7); userAvatarBase64 = base64; localStorage.setItem(`avatar_${safeUser}`, base64); document.getElementById('profilePicPreview').innerHTML = `<img src="${base64}"><div class="camera-icon">📷</div>`; db.ref(`user_profiles/${safeUser}/avatar`).set(base64); updateUserChip(); refreshOnlineBar(); }; img.src = ev.target.result; }; reader.readAsDataURL(file); });
@@ -702,7 +637,7 @@
     async function refreshOnlineBar() { db.ref('presence').on('value', async (snap) => { const bar = document.getElementById('onlineBar'); bar.innerHTML = '<span>🟢 Online:</span>'; let hasAny=false; const now=Date.now(); const users=[]; snap.forEach(c=>{ const u=c.val(); if(u && u.name && (now-u.t)<60000) users.push({name:u.name, id:c.key}); }); for(let u of users){ hasAny=true; const avatar=await getUserAvatar(u.id); const avatarImg = avatar ? `<img src="${avatar}">` : `<span>${u.name.charAt(0)}</span>`; const div=document.createElement('div'); div.className='user-avatar'; div.onclick=()=>showToast(`👤 ${u.name}`,'green'); div.innerHTML=`<div class="av-circle">${avatarImg}<div class="online-dot"></div></div><div class="av-name">${u.name===currentUser?'You':u.name}</div>`; bar.appendChild(div); } if(!hasAny) bar.innerHTML+='<span> no one online</span>'; }); }
     async function getUserAvatar(uid) { const snap = await db.ref(`user_profiles/${uid}/avatar`).once('value'); return snap.val(); }
 
-    // Private rooms & DM (same as original, just referencing)
+    // Private rooms & DM (same as before)
     function openRoomModal() { document.getElementById('roomModal').classList.add('active'); loadRoomList(); }
     function closeRoomModal() { document.getElementById('roomModal').classList.remove('active'); }
     function loadRoomList() { db.ref('private_rooms').once('value', snap=>{ const c=document.getElementById('roomListContainer'); c.innerHTML=''; snap.forEach(ch=>{ const rid=ch.key; const d=ch.val(); const div=document.createElement('div'); div.className='room-item'; div.innerHTML=`🔒 ${d.name||rid}`; div.onclick=()=>{ document.getElementById('joinRoomId').value=rid; }; c.appendChild(div); }); }); }
@@ -720,15 +655,6 @@
     function copyUniqueLink() { const link = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(currentUser)}`; navigator.clipboard.writeText(link); showToast('Link copied','green'); }
     function closeLinkModal() { document.getElementById('linkModal').classList.remove('active'); }
     async function processInviteIfPresent() { const params=new URLSearchParams(window.location.search); const target=params.get('invite'); if(!target || target===currentUser) return; const roomId=getDmRoomId(currentUser,target); const exists=await db.ref(`dm_chats/${roomId}/messages`).limitToFirst(1).once('value'); if(exists.exists()) { switchRoom(roomId,target,false,true,target); return; } const banner=document.createElement('div'); banner.className='invite-banner'; banner.innerHTML=`<div><strong>${target}</strong> invited you</div><button onclick="sendDmRequest('${target}');this.parentElement.remove()">Connect</button>`; document.body.appendChild(banner); setTimeout(()=>banner.remove(),30000); }
-
-    // Mic button events: hold to record, or click to start/stop (better UX)
-    let pressTimer = null;
-    micBtn.addEventListener('mousedown', () => { pressTimer = setTimeout(() => startRecording(), 150); });
-    micBtn.addEventListener('mouseup', () => { if (pressTimer) clearTimeout(pressTimer); if (isRecording) stopRecording(); });
-    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(() => startRecording(), 150); });
-    micBtn.addEventListener('touchend', () => { if (pressTimer) clearTimeout(pressTimer); if (isRecording) stopRecording(); });
-    // Also allow click to toggle (fallback)
-    micBtn.addEventListener('click', () => { if (!isRecording) startRecording(); else stopRecording(); });
 
     // Presence & init
     const presRef = db.ref('presence/' + safeUser);
